@@ -1,0 +1,95 @@
+:root {
+  --bg: #050b1a;
+  --panel: rgba(7, 19, 41, 0.8);
+  --line: rgba(141, 177, 241, 0.3);
+  --text: #dbe8ff;
+  --accent: #24a9ff;
+}
+
+* { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { margin: 0; color: var(--text); }
+
+.hidden { display: none !important; }
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, #0f2d5c, #050b1a 65%);
+  opacity: 0.95;
+}
+
+.frame {
+  position: relative;
+  z-index: 2;
+  width: min(1100px, 92vw);
+  height: min(760px, 90vh);
+  border: 1px solid var(--line);
+  background: linear-gradient(170deg, rgba(15, 38, 71, 0.8), rgba(6, 16, 35, 0.95));
+  border-radius: 16px;
+  padding: 20px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+h1 { margin: 0; font-size: 1.25rem; letter-spacing: 1px; }
+p { margin: 4px 0 0; opacity: 0.75; }
+
+nav { display: flex; gap: 8px; padding: 12px 0; }
+.tab {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+.tab.active, button:hover { border-color: var(--accent); color: #fff; }
+
+main { height: calc(100% - 120px); overflow: auto; }
+.view { display: none; }
+.view.active { display: block; }
+
+.grid { display: grid; gap: 10px; }
+.grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.panel h3 { margin: 0 0 8px; }
+.metric strong { font-size: 2rem; color: var(--accent); }
+
+input, textarea, select, button {
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(7, 22, 44, 0.9);
+  color: var(--text);
+  padding: 10px;
+}
+textarea { min-height: 80px; resize: vertical; }
+button { cursor: pointer; background: linear-gradient(90deg, #1f70c9, #24a9ff); color: white; font-weight: 600; }
+#closeBtn { width: 40px; height: 40px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.card {
+  border: 1px solid var(--line);
+  background: rgba(4, 16, 35, 0.9);
+  border-radius: 10px;
+  padding: 10px;
+}
+.card .meta { font-size: 0.8rem; opacity: 0.8; }
+.log { border-top: 1px dashed var(--line); padding-top: 8px; margin-top: 8px; font-size: 0.85rem; }
