@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نظام استخبارات FBI</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app" class="hidden">
+    <div class="overlay"></div>
+    <div class="frame">
+      <header>
+        <div>
+          <h1>مكتب التحقيقات الفدرالي - وحدة الاستخبارات</h1>
+          <p>شبكة عمليات سرية | مصرح لعناصر FBI فقط</p>
+        </div>
+        <button id="closeBtn">✕</button>
+      </header>
+
+      <nav>
+        <button data-view="overview" class="tab active">نظرة عامة</button>
+        <button data-view="cases" class="tab">القضايا</button>
+        <button data-view="operations" class="tab">العمليات</button>
+        <button data-view="approvals" class="tab">الموافقات</button>
+      </nav>
+
+      <main>
+        <section id="overview" class="view active">
+          <div class="grid two">
+            <article class="panel metric"><h3>القضايا النشطة</h3><strong id="metricCases">0</strong></article>
+            <article class="panel metric"><h3>العناصر المتخفية</h3><strong id="metricUndercover">0</strong></article>
+          </div>
+          <article class="panel">
+            <h3>ملفات التهديد (NPC)</h3>
+            <div id="npcFiles" class="cards"></div>
+          </article>
+        </section>
+
+        <section id="cases" class="view">
+          <article class="panel">
+            <h3>إنشاء قضية سرية</h3>
+            <form id="caseForm" class="grid two">
+              <input name="title" placeholder="عنوان القضية" required />
+              <input name="summary" placeholder="ملخص مختصر" required />
+              <input name="suspects" placeholder="المشتبهين (فاصلة ,)" />
+              <input name="plates" placeholder="أرقام اللوحات (فاصلة ,)" />
+              <input name="weapons" placeholder="الأسلحة المرتبطة" />
+              <input name="linkedVehicles" placeholder="المركبات المرتبطة" />
+              <textarea name="notes" placeholder="ملاحظات سرية"></textarea>
+              <input name="media" placeholder="روابط صور/مقاطع/كاميرات" />
+              <button type="submit">حفظ القضية</button>
+            </form>
+          </article>
+
+          <article class="panel">
+            <h3>لوحة القضايا</h3>
+            <div id="caseList" class="cards"></div>
+          </article>
+        </section>
+
+        <section id="operations" class="view">
+          <article class="panel">
+            <h3>وحدة العمليات</h3>
+            <form id="opsForm" class="grid two">
+              <select name="caseId" id="opsCaseId" required></select>
+              <select name="operation">
+                <option value="phoneTrace">طلب تتبع هاتف</option>
+                <option value="bugPlant">طلب زرع جهاز تنصت</option>
+                <option value="raidStart">طلب بدء مداهمة</option>
+              </select>
+              <textarea name="reason" class="full" placeholder="سبب الطلب / المبرر القانوني" required></textarea>
+              <button type="submit">إرسال طلب العملية</button>
+            </form>
+          </article>
+          <article class="panel">
+            <h3>التحكم بمراحل المداهمة</h3>
+            <div class="grid two">
+              <select id="raidCaseId"></select>
+              <button id="advanceRaid">ترقية المرحلة</button>
+            </div>
+          </article>
+        </section>
+
+        <section id="approvals" class="view">
+          <article class="panel">
+            <h3>طلبات الموافقة المعلقة</h3>
+            <div id="approvalList" class="cards"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="js/app.js"></script>
+</body>
+</html>
