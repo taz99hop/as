@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gas Company Panel</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="app" class="hidden">
+    <div class="glass"></div>
+    <section class="panel">
+      <header>
+        <div>
+          <h1>لوحة شركة الغاز</h1>
+          <p>واجهة إدارة وتشغيل الموظفين</p>
+        </div>
+        <button id="closeBtn">✕</button>
+      </header>
+
+      <div class="cards">
+        <article>
+          <span>المهام المنفذة</span>
+          <strong id="tasks">0</strong>
+        </article>
+        <article>
+          <span>إجمالي الأرباح</span>
+          <strong id="earnings">$0</strong>
+        </article>
+        <article>
+          <span>وحدات الغاز المتاحة</span>
+          <strong id="gas">0</strong>
+        </article>
+      </div>
+
+      <div class="actions">
+        <button id="dutyBtn" class="primary">بدء الدوام</button>
+        <button id="missionBtn">طلب مهمة</button>
+      </div>
+
+      <section id="managerBox" class="manager hidden">
+        <h2>إدارة الموظفين</h2>
+        <button id="refreshEmployees">تحديث القائمة</button>
+        <ul id="employees"></ul>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

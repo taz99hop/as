@@ -1,1 +1,63 @@
-# as
+# qb-gascompany (QBCore)
+
+سكريبت وظيفة مدنية متكامل لشركة الغاز في FiveM بنظام QBCore.
+
+## المزايا
+- نظام دوام كامل مع **شاحنة غاز مخصصة** لا تعمل إلا أثناء الدوام.
+- مهام توصيل وتعبئة غاز للمنازل والمنشآت عبر NPC.
+- تكامل Target (يدعم `qb-target` أو `ox_target`).
+- واجهة **NUI احترافية** لإدارة الدوام، الإحصائيات، والموظفين.
+- صلاحيات مدير: متابعة الموظفين، عرض الحالة، وطرد الموظف.
+- نظام رواتب: راتب أساسي + بونص على عدد المهام + مكافآت milestones.
+- خصم تلقائي عند عدم إرجاع الشاحنة.
+- Anti-Exploit أساسي (تحقق الوظيفة، تبريد طلب المهام، timeout).
+- استخدام Props من اللعبة لإضفاء واقعية محطة التعبئة.
+
+## البنية
+```
+qb-gascompany/
+├─ fxmanifest.lua
+├─ shared/config.lua
+├─ client/
+│  ├─ main.lua
+│  ├─ target.lua
+│  └─ nui.lua
+├─ server/main.lua
+└─ web/
+   ├─ index.html
+   ├─ style.css
+   └─ app.js
+```
+
+## المتطلبات
+- `qb-core`
+- `ox_lib`
+- `oxmysql`
+- `qb-target` أو `ox_target`
+
+## التثبيت
+1. ضع مجلد `qb-gascompany` داخل `resources/[jobs]/`.
+2. أضف `ensure qb-gascompany` في `server.cfg` بعد المتطلبات.
+3. أضف وظيفة `gascompany` في `qb-core/shared/jobs.lua`.
+4. عدّل `shared/config.lua` حسب سيرفرك (مواقع، رواتب، موديلات، إلخ).
+
+## مثال وظيفة QBCore
+```lua
+['gascompany'] = {
+    label = 'شركة الغاز',
+    defaultDuty = false,
+    offDutyPay = false,
+    grades = {
+        ['0'] = { name = 'متدرب', payment = 80 },
+        ['1'] = { name = 'موظف', payment = 120 },
+        ['2'] = { name = 'مشرف', payment = 160 },
+        ['3'] = { name = 'نائب مدير', payment = 200 },
+        ['4'] = { name = 'مدير', isboss = true, payment = 250 },
+    }
+}
+```
+
+## ملاحظات
+- السكربت لا يحتوي أي أنظمة انفجار أو تسريب (حسب الطلب).
+- يمكن ربطه لاحقاً مع أنظمة محاسبة/فاتورة أو هواتف RP بسهولة عبر أحداث السيرفر.
+- الواجهة مبنية بطابع glassmorphism حديث مع أزرار كاملة الوظائف.
