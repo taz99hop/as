@@ -122,9 +122,16 @@ local function spawnTruck()
 
     local coords = Config.Duty.truckSpawn
     local veh = CreateVehicle(model, coords.x, coords.y, coords.z, coords.w, true, true)
-    SetVehicleEngineOn(veh, true, true, false)
     SetVehicleDirtLevel(veh, 0.0)
-    SetVehicleNumberPlateText(veh, ('GAS%03d'):format(math.random(100, 999)))
+
+    local plate = ('GAS%03d'):format(math.random(100, 999))
+    SetVehicleNumberPlateText(veh, plate)
+    SetVehicleDoorsLocked(veh, 1)
+    SetVehicleEngineOn(veh, true, true, false)
+
+    -- Key ownership compatibility for common key systems
+    TriggerEvent('vehiclekeys:client:SetOwner', plate)
+    TriggerEvent('qb-vehiclekeys:client:AddKeys', plate)
 
     state.truck = veh
     state.truckNetId = VehToNet(veh)
