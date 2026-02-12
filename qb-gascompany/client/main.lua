@@ -213,11 +213,13 @@ end
 
 local function applyVehicleKeyOwnership(veh, plate)
     SetVehicleNumberPlateText(veh, plate)
-    SetVehicleDoorsLocked(veh, 1)
+    SetVehicleDoorsLocked(veh, 0)
+    SetVehicleDoorsLockedForAllPlayers(veh, false)
     SetVehicleNeedsToBeHotwired(veh, false)
     SetVehicleHasBeenOwnedByPlayer(veh, true)
 
     TriggerEvent('vehiclekeys:client:SetOwner', plate)
+    TriggerEvent('vehiclekeys:client:SetOwner', veh)
     TriggerEvent('qb-vehiclekeys:client:AddKeys', plate)
     TriggerEvent('qb-vehiclekeys:client:SetOwner', plate)
     TriggerServerEvent('qb-vehiclekeys:server:AcquireVehicleKeys', plate)
@@ -250,6 +252,17 @@ local function spawnTruck()
     local ped = PlayerPedId()
     TaskWarpPedIntoVehicle(ped, truck, -1)
     SetVehicleEngineOn(truck, true, true, false)
+    SetVehicleUndriveable(truck, false)
+
+    CreateThread(function()
+        for _ = 1, 20 do
+            if not DoesEntityExist(truck) then break end
+            SetVehicleEngineOn(truck, true, true, false)
+            SetVehicleUndriveable(truck, false)
+            SetVehicleDoorsLocked(truck, 0)
+            Wait(250)
+        end
+    end)
 
     state.truck = truck
     state.trailer = trailer
@@ -320,30 +333,7 @@ RegisterNetEvent('qb-gascompany:client:talkToNpc', function()
     TaskTurnPedToFaceEntity(state.npc, PlayerPedId(), 2000)
     Wait(650)
     state.mission.talked = true
-    notify('Customer is waiting. Grab nozzle from trailer, then press E to fill.', 'inform')
-end)
-
-RegisterNetEvent('qb-gascompany:client:pickupNozzle', function()
-    if not state.mission or not state.mission.talked then
-        notify('Talk to customer first.', 'error')
-        return
-    end
-
-    if state.hasNozzle then
-        notify('You already hold the nozzle.', 'error')
-        return
-    end
-
-    local ped = PlayerPedId()
-    local hash = loadModel(Config.Tools.hoseProp)
-    if not hash then return end
-
-    state.nozzleProp = CreateObject(hash, 0.0, 0.0, 0.0, true, true, false)
-    AttachEntityToEntity(state.nozzleProp, ped, GetPedBoneIndex(ped, 57005), 0.12, 0.02, -0.02, 290.0, 70.0, 20.0, true, true, false, true, 1, true)
-    state.hasNozzle = true
-    SetModelAsNoLongerNeeded(hash)
-
-    notify('Nozzle picked up. Return to customer and start filling.', 'success')
+    notify('Customer is ready. Press E to start filling.', 'inform')
 end)
 
 RegisterNetEvent('qb-gascompany:client:startFill', function()
@@ -354,11 +344,6 @@ RegisterNetEvent('qb-gascompany:client:startFill', function()
     end
 
     if not ensureTruckNearby() then return end
-    if not state.hasNozzle then
-        notify('Pick up nozzle from trailer first.', 'error')
-        return
-    end
-
     if not state.gasUnits or state.gasUnits < state.mission.use then
         notify('Trailer tank empty. Refill at company station.', 'error')
         return
@@ -517,21 +502,6 @@ CreateThread(function()
                     else
                         TriggerEvent('qb-gascompany:client:finishMission')
                     end
-                    Wait(250)
-                end
-            end
-        end
-
-        if state.onDuty and state.mission and state.trailer and DoesEntityExist(state.trailer) and not state.hasNozzle then
-            local pos = GetEntityCoords(PlayerPedId())
-            local rearPos = GetOffsetFromEntityInWorldCoords(state.trailer, 0.0, -4.3, 0.1)
-            local dist = #(pos - rearPos)
-            if dist <= 2.1 then
-                waitMs = 0
-                DrawMarker(2, rearPos.x, rearPos.y, rearPos.z + 0.08, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.18, 0.18, 0.18, 52, 211, 153, 180, false, true, 2, false, nil, nil, false)
-                showHelp('Press ~INPUT_CONTEXT~ to grab nozzle from trailer')
-                if IsControlJustReleased(0, 38) then
-                    TriggerEvent('qb-gascompany:client:pickupNozzle')
                     Wait(250)
                 end
             end
