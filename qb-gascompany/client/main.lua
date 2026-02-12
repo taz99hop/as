@@ -65,6 +65,7 @@ local function stopDuty(clearTruck)
     state.truckNetId = nil
     state.gasUnits = 0
 
+    LocalPlayer.state:set('gasDuty', false, true)
     TriggerServerEvent('qb-gascompany:server:setDuty', false)
 end
 
@@ -129,8 +130,6 @@ local function spawnTruck()
     state.truckNetId = VehToNet(veh)
     state.gasUnits = Config.Truck.maxGasUnits
 
-    TriggerEvent('qb-gascompany:client:registerVehicleTarget', veh)
-
     TriggerServerEvent('qb-gascompany:server:registerTruck', state.truckNetId)
     notify('تم استلام شاحنة الغاز.', 'success')
 end
@@ -148,8 +147,6 @@ local function createMissionPed(mission)
     FreezeEntityPosition(state.npc, true)
     SetBlockingOfNonTemporaryEvents(state.npc, true)
     TaskStartScenarioInPlace(state.npc, Config.Peds.scenario, 0, true)
-
-    TriggerEvent('qb-gascompany:client:addNpcTarget', state.npc)
 
     SetModelAsNoLongerNeeded(hash)
 end
@@ -287,10 +284,12 @@ RegisterNetEvent('qb-gascompany:client:setDuty', function(toggle)
         state.onDuty = true
         drawHubObjects()
         setUniform(true)
+        LocalPlayer.state:set('gasDuty', true, true)
         TriggerServerEvent('qb-gascompany:server:setDuty', true)
         notify('تم بدء الدوام في شركة الغاز.', 'success')
     elseif not toggle and state.onDuty then
         stopDuty(false)
+        LocalPlayer.state:set('gasDuty', false, true)
         setUniform(false)
         notify('تم إنهاء الدوام.', 'inform')
     end
@@ -330,6 +329,44 @@ RegisterNetEvent('qb-gascompany:client:openPanel', function()
             isBoss = Config.BossGrades[(QBCore.Functions.GetPlayerData().job.grade.level or 0)] == true
         }
     })
+end)
+
+
+local function showHelp(msg)
+    BeginTextCommandDisplayHelp('STRING')
+    AddTextComponentSubstringPlayerName(msg)
+    EndTextCommandDisplayHelp(0, false, true, 1)
+end
+
+CreateThread(function()
+    while true do
+        local waitMs = 1000
+
+        if state.onDuty and state.mission and state.npc and DoesEntityExist(state.npc) then
+            local ped = PlayerPedId()
+            local pos = GetEntityCoords(ped)
+            local npcPos = GetEntityCoords(state.npc)
+            local dist = #(pos - npcPos)
+
+            if dist <= 2.0 then
+                waitMs = 0
+                showHelp('اضغط ~INPUT_CONTEXT~ للتفاعل مع المدني')
+
+                if IsControlJustReleased(0, 38) then
+                    if not state.mission.talked then
+                        TriggerEvent('qb-gascompany:client:talkToNpc')
+                    elseif not state.mission.filled then
+                        TriggerEvent('qb-gascompany:client:startFill')
+                    else
+                        TriggerEvent('qb-gascompany:client:finishMission')
+                    end
+                    Wait(250)
+                end
+            end
+        end
+
+        Wait(waitMs)
+    end
 end)
 
 RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()

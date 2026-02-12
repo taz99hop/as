@@ -3,7 +3,7 @@ Config = {}
 Config.Debug = false
 Config.JobName = 'gascompany'
 Config.BossGrades = { [4] = true }
-Config.Target = 'qb-target' -- qb-target | ox_target
+-- Config.Target (legacy): لم يعد مستخدماً بعد التحويل إلى تفاعل زر E
 
 Config.Duty = {
     hub = vec3(1184.06, -330.12, 69.32),

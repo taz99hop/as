@@ -1,202 +1,130 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 
+local INTERACT_KEY = 38 -- E
+
 local function hasGasJob()
     local player = QBCore.Functions.GetPlayerData()
     return player and player.job and player.job.name == Config.JobName
 end
 
-local function mapOptions(options)
-    local mapped = {}
+local function showHelp(msg)
+    BeginTextCommandDisplayHelp('STRING')
+    AddTextComponentSubstringPlayerName(msg)
+    EndTextCommandDisplayHelp(0, false, true, 1)
+end
 
-    for i = 1, #options do
-        local option = options[i]
+local function isNear(coords, radius)
+    local pos = GetEntityCoords(PlayerPedId())
+    return #(pos - coords) <= radius
+end
 
-        if Config.Target == 'ox_target' then
-            mapped[#mapped + 1] = {
-                name = option.name or ('gas_option_%s'):format(i),
-                icon = option.icon,
-                label = option.label,
-                canInteract = option.canInteract,
-                onSelect = option.cb
-            }
-        else
-            mapped[#mapped + 1] = {
-                icon = option.icon,
-                label = option.label,
-                canInteract = option.canInteract,
-                action = option.cb
-            }
+local function drawMarkerAt(coords)
+    DrawMarker(2, coords.x, coords.y, coords.z + 0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.18, 0.18, 0.18, 52, 211, 153, 180, false, true, 2, false, nil, nil, false)
+end
+
+CreateThread(function()
+    while true do
+        local waitMs = 1000
+
+        if hasGasJob() then
+            local onDuty = LocalPlayer.state.gasDuty == true
+
+            if isNear(Config.Duty.hub, 2.0) then
+                waitMs = 0
+                drawMarkerAt(Config.Duty.hub)
+                showHelp('اضغط ~INPUT_CONTEXT~ لبدء/إنهاء الدوام أو فتح لوحة شركة الغاز')
+
+                if IsControlJustReleased(0, INTERACT_KEY) then
+                    if IsControlPressed(0, 21) then
+                        TriggerEvent('qb-gascompany:client:openPanel')
+                    else
+                        TriggerEvent('qb-gascompany:client:setDuty', not onDuty)
+                    end
+                    Wait(250)
+                end
+            end
+
+            if onDuty and isNear(Config.Duty.truckSpawn.xyz, 3.5) then
+                waitMs = 0
+                drawMarkerAt(Config.Duty.truckSpawn.xyz)
+                showHelp('اضغط ~INPUT_CONTEXT~ لاستلام شاحنة الغاز')
+
+                if IsControlJustReleased(0, INTERACT_KEY) then
+                    TriggerEvent('qb-gascompany:client:spawnTruck')
+                    Wait(250)
+                end
+            end
+
+            if onDuty and isNear(Config.Duty.stash, 2.2) then
+                waitMs = 0
+                drawMarkerAt(Config.Duty.stash)
+                showHelp('اضغط ~INPUT_CONTEXT~ لاستلام مهمة جديدة')
+
+                if IsControlJustReleased(0, INTERACT_KEY) then
+                    TriggerServerEvent('qb-gascompany:server:requestMission')
+                    Wait(250)
+                end
+            end
+
+            if onDuty and isNear(Config.Duty.returnPoint, 2.5) then
+                waitMs = 0
+                drawMarkerAt(Config.Duty.returnPoint)
+                showHelp('اضغط ~INPUT_CONTEXT~ لإرجاع الشاحنة')
+
+                if IsControlJustReleased(0, INTERACT_KEY) then
+                    TriggerEvent('qb-gascompany:client:returnTruck')
+                    Wait(250)
+                end
+            end
         end
+
+        Wait(waitMs)
     end
+end)
 
-    return mapped
-end
+CreateThread(function()
+    while true do
+        local waitMs = 1000
+        local veh = GetVehiclePedIsIn(PlayerPedId(), false)
 
-local function addBoxTarget(name, coords, size, options)
-    local mapped = mapOptions(options)
+        if veh == 0 then
+            local playerPos = GetEntityCoords(PlayerPedId())
+            local closestVeh = GetClosestVehicle(playerPos.x, playerPos.y, playerPos.z, 4.0, 0, 71)
 
-    if Config.Target == 'ox_target' then
-        exports.ox_target:addBoxZone({
-            name = name,
-            coords = coords,
-            size = size,
-            rotation = 0,
-            debug = Config.Debug,
-            options = mapped
-        })
-    else
-        exports['qb-target']:AddBoxZone(name, coords, size.x, size.y, {
-            heading = 0,
-            minZ = coords.z - 1,
-            maxZ = coords.z + 2,
-            debugPoly = Config.Debug
-        }, {
-            options = mapped,
-            distance = 2.0
-        })
+            if closestVeh ~= 0 and LocalPlayer.state.gasDuty == true then
+                local rearPos = GetOffsetFromEntityInWorldCoords(closestVeh, 0.0, -3.2, 0.0)
+                if #(playerPos - rearPos) <= 1.8 then
+                    waitMs = 0
+                    drawMarkerAt(rearPos)
+
+                    local doorAngle = GetVehicleDoorAngleRatio(closestVeh, 5)
+                    local text = doorAngle > 0.01 and 'اضغط ~INPUT_CONTEXT~ لإغلاق خزان الشاحنة' or 'اضغط ~INPUT_CONTEXT~ لفتح خزان الشاحنة'
+                    showHelp(text)
+
+                    if IsControlJustReleased(0, INTERACT_KEY) then
+                        if doorAngle > 0.01 then
+                            TriggerEvent('qb-gascompany:client:closeTruckTank')
+                        else
+                            TriggerEvent('qb-gascompany:client:openTruckTank')
+                        end
+                        Wait(200)
+                    end
+                end
+            end
+        end
+
+        Wait(waitMs)
     end
-end
-
-local function addEntityTarget(entity, options, distance)
-    if not entity or not DoesEntityExist(entity) then return end
-
-    local mapped = mapOptions(options)
-
-    if Config.Target == 'ox_target' then
-        exports.ox_target:addLocalEntity(entity, mapped)
-    else
-        exports['qb-target']:AddTargetEntity(entity, {
-            options = mapped,
-            distance = distance or 2.5
-        })
-    end
-end
+end)
 
 RegisterNetEvent('qb-gascompany:client:setupTargets', function()
-    addBoxTarget('gas_duty', Config.Duty.hub, vec3(1.4, 1.2, 2.2), {
-        {
-            name = 'gas_toggle_duty',
-            icon = 'fa-solid fa-user-clock',
-            label = 'بدء / إنهاء الدوام',
-            cb = function()
-                TriggerEvent('qb-gascompany:client:setDuty', not LocalPlayer.state.gasDuty)
-                LocalPlayer.state:set('gasDuty', not LocalPlayer.state.gasDuty, true)
-            end,
-            canInteract = function()
-                return hasGasJob()
-            end
-        },
-        {
-            name = 'gas_open_panel',
-            icon = 'fa-solid fa-chart-line',
-            label = 'فتح لوحة شركة الغاز',
-            cb = function()
-                TriggerEvent('qb-gascompany:client:openPanel')
-            end,
-            canInteract = function()
-                return hasGasJob()
-            end
-        },
-    })
-
-    addBoxTarget('gas_truck_spawn', Config.Duty.truckSpawn.xyz, vec3(2.5, 4.2, 2.2), {
-        {
-            name = 'gas_spawn_truck',
-            icon = 'fa-solid fa-truck',
-            label = 'استلام شاحنة الغاز',
-            cb = function()
-                TriggerEvent('qb-gascompany:client:spawnTruck')
-            end,
-            canInteract = function()
-                return hasGasJob() and LocalPlayer.state.gasDuty == true
-            end
-        },
-    })
-
-    addBoxTarget('gas_return', Config.Duty.returnPoint, vec3(2.4, 2.4, 2.0), {
-        {
-            name = 'gas_return_truck',
-            icon = 'fa-solid fa-right-from-bracket',
-            label = 'إرجاع الشاحنة',
-            cb = function()
-                TriggerEvent('qb-gascompany:client:returnTruck')
-            end,
-            canInteract = function()
-                return hasGasJob() and LocalPlayer.state.gasDuty == true
-            end
-        }
-    })
-
-    addBoxTarget('gas_dispatch', Config.Duty.stash, vec3(1.8, 1.8, 2.0), {
-        {
-            name = 'gas_request_mission',
-            icon = 'fa-solid fa-list-check',
-            label = 'استلام مهمة جديدة',
-            cb = function()
-                TriggerServerEvent('qb-gascompany:server:requestMission')
-            end,
-            canInteract = function()
-                return hasGasJob() and LocalPlayer.state.gasDuty == true
-            end
-        }
-    })
+    -- E-interactions are created by threads in this file.
 end)
 
-RegisterNetEvent('qb-gascompany:client:registerVehicleTarget', function(entity)
-    addEntityTarget(entity, {
-        {
-            name = 'gas_truck_open_tank',
-            icon = 'fa-solid fa-door-open',
-            label = 'فتح خزان الشاحنة',
-            cb = function()
-                TriggerEvent('qb-gascompany:client:openTruckTank')
-            end
-        },
-        {
-            name = 'gas_truck_close_tank',
-            icon = 'fa-solid fa-door-closed',
-            label = 'إغلاق خزان الشاحنة',
-            cb = function()
-                TriggerEvent('qb-gascompany:client:closeTruckTank')
-            end
-        }
-    }, 2.5)
+RegisterNetEvent('qb-gascompany:client:registerVehicleTarget', function()
+    -- Kept only for compatibility.
 end)
 
-RegisterNetEvent('qb-gascompany:client:addNpcTarget', function(entity)
-    addEntityTarget(entity, {
-        {
-            name = 'gas_talk_npc',
-            icon = 'fa-solid fa-comments',
-            label = 'التحدث مع المدني',
-            cb = function()
-                TriggerEvent('qb-gascompany:client:talkToNpc')
-            end,
-            canInteract = function(_, distance)
-                return distance <= Config.AntiExploit.maxDistanceToInteract
-            end
-        },
-        {
-            name = 'gas_fill_npc',
-            icon = 'fa-solid fa-gas-pump',
-            label = 'بدء تعبئة الغاز',
-            cb = function()
-                TriggerEvent('qb-gascompany:client:startFill')
-            end,
-            canInteract = function(_, distance)
-                return distance <= Config.AntiExploit.maxDistanceToInteract
-            end
-        },
-        {
-            name = 'gas_finish_npc',
-            icon = 'fa-solid fa-check',
-            label = 'إنهاء المهمة',
-            cb = function()
-                TriggerEvent('qb-gascompany:client:finishMission')
-            end,
-            canInteract = function(_, distance)
-                return distance <= Config.AntiExploit.maxDistanceToInteract
-            end
-        }
-    }, 2.0)
+RegisterNetEvent('qb-gascompany:client:addNpcTarget', function()
+    -- Kept only for compatibility.
 end)
