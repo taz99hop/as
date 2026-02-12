@@ -76,6 +76,32 @@
           </div>
           <small id="importMeta"></small>
         </div>
+
+        <div class="company-box">
+          <h3>تشغيل الشركة</h3>
+          <div class="company-actions">
+            <select id="fleetSelect">
+              <option value="standard">Standard Fleet</option>
+              <option value="heavy">Heavy Fleet</option>
+            </select>
+            <button id="setFleetBtn">تعيين الأسطول</button>
+          </div>
+          <div class="company-actions">
+            <select id="shiftSelect">
+              <option value="open">Open</option>
+              <option value="morning">Morning</option>
+              <option value="evening">Evening</option>
+            </select>
+            <button id="setShiftBtn">تعيين الشفت</button>
+          </div>
+          <p>السمعة: <strong id="companyReputation">0</strong></p>
+        </div>
+
+        <div class="company-box">
+          <h3>العقود</h3>
+          <ul id="contractsList"></ul>
+        </div>
+
         <ul id="employees"></ul>
       </section>
     </section>

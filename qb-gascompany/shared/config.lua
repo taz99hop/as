@@ -37,6 +37,11 @@ Config.Tools = {
     scannerProp = 'prop_notepad_01'
 }
 
+Config.FleetTiers = {
+    standard = { label = 'Standard', model = 'phantom', trailerModel = 'tanker', maxGasUnits = 100, upkeep = 0 },
+    heavy = { label = 'Heavy', model = 'hauler', trailerModel = 'tanker', maxGasUnits = 130, upkeep = 200 },
+}
+
 Config.Truck = {
     model = 'phantom',
     trailerModel = 'tanker',
@@ -48,7 +53,7 @@ Config.Truck = {
 Config.Payments = {
     base = 240,
     perTaskBonus = 50,
-    companyCutPercent = 22, -- نسبة الشركة من كل مهمة
+    companyCutPercent = 22,
     milestone = {
         [5] = 300,
         [10] = 750,
@@ -58,10 +63,76 @@ Config.Payments = {
 
 Config.Company = {
     initialStock = 800,
+    initialFunds = 5000,
     import = {
         liters = 500,
         cost = 9000,
     }
+}
+
+Config.DynamicEconomy = {
+    enabled = true,
+    stockLowThreshold = 200,
+    lowStockPayoutBonus = 1.15,
+    peakHours = { start = 19, ['end'] = 23 },
+    peakPayoutBonus = 1.10,
+}
+
+Config.Reputation = {
+    start = 50,
+    min = 0,
+    max = 100,
+    fastMissionSec = 300,
+    fastBonus = 2,
+    slowPenalty = 1,
+}
+
+Config.OperatingCosts = {
+    enabled = true,
+    intervalMinutes = 30,
+    baseCost = 1200,
+}
+
+Config.Shifts = {
+    default = 'open',
+    list = {
+        open = { label = 'Open Shift', start = 0, ['end'] = 23 },
+        morning = { label = 'Morning Shift', start = 8, ['end'] = 15 },
+        evening = { label = 'Evening Shift', start = 16, ['end'] = 23 },
+    }
+}
+
+Config.Contracts = {
+    {
+        id = 'sandy-food-chain',
+        label = 'Sandy Food Chain',
+        region = 'sandy',
+        target = 6,
+        bonusFunds = 8500,
+    },
+    {
+        id = 'paleto-industry',
+        label = 'Paleto Industry',
+        region = 'paleto',
+        target = 5,
+        bonusFunds = 7600,
+    },
+}
+
+Config.Alerts = {
+    enabled = true,
+    intervalMinutes = 20,
+    messages = {
+        'Operational alert: Sandy demand surge detected.',
+        'Operational alert: City reserve pressure increased.',
+        'Operational alert: Paleto clients requesting rapid service.',
+    }
+}
+
+Config.Integrations = {
+    billing = false,
+    phone = false,
+    policeEscort = false,
 }
 
 Config.Missions = {
@@ -77,11 +148,9 @@ Config.Missions = {
         { label = 'Vespucci #2', region = 'city', payoutMult = 1.00, coords = vec4(-1164.58, -1458.34, 4.43, 20.0), use = 15 },
         { label = 'La Mesa #15', region = 'city', payoutMult = 1.00, coords = vec4(722.54, -1088.52, 22.18, 268.0), use = 19 },
 
-        -- Sandy (أعلى أجر)
         { label = 'Sandy Housing #6', region = 'sandy', payoutMult = 1.45, coords = vec4(1675.52, 4958.26, 42.34, 138.0), use = 24 },
         { label = 'Sandy Market', region = 'sandy', payoutMult = 1.40, coords = vec4(1963.24, 3740.92, 32.34, 122.0), use = 21 },
 
-        -- Paleto
         { label = 'Paleto Bay House #3', region = 'paleto', payoutMult = 1.15, coords = vec4(-130.35, 6471.28, 31.58, 312.0), use = 20 },
         { label = 'Paleto Workshop', region = 'paleto', payoutMult = 1.20, coords = vec4(96.13, 6618.59, 32.44, 46.0), use = 23 },
     }

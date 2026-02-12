@@ -12,6 +12,12 @@ const withdrawAmountEl = document.getElementById('withdrawAmount');
 const withdrawBtn = document.getElementById('withdrawBtn');
 const importBtn = document.getElementById('importBtn');
 const importMeta = document.getElementById('importMeta');
+const fleetSelect = document.getElementById('fleetSelect');
+const setFleetBtn = document.getElementById('setFleetBtn');
+const shiftSelect = document.getElementById('shiftSelect');
+const setShiftBtn = document.getElementById('setShiftBtn');
+const companyReputationEl = document.getElementById('companyReputation');
+const contractsList = document.getElementById('contractsList');
 
 const tasksEl = document.getElementById('tasks');
 const earningsEl = document.getElementById('earnings');
@@ -70,6 +76,29 @@ const renderEmployees = (employees = []) => {
   });
 };
 
+
+const renderContracts = (contracts = []) => {
+  contractsList.innerHTML = '';
+  if (!contracts.length) {
+    const li = document.createElement('li');
+    li.textContent = 'لا توجد عقود متاحة.';
+    contractsList.appendChild(li);
+    return;
+  }
+
+  contracts.forEach((c) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<strong>${c.label}</strong><small>${c.region} | ${c.progress}/${c.target} | Bonus: $${c.bonusFunds}</small>`;
+
+    const btn = document.createElement('button');
+    btn.textContent = c.active ? 'إيقاف' : 'تفعيل';
+    btn.addEventListener('click', () => post('managerAction', { action: 'toggleContract', contractId: c.id }));
+
+    li.appendChild(btn);
+    contractsList.appendChild(li);
+  });
+};
+
 const setTankHud = (liters = 0, max = 100) => {
   const safeMax = Math.max(max, 1);
   const ratio = Math.max(0, Math.min(100, (liters / safeMax) * 100));
@@ -115,7 +144,11 @@ const syncPanel = (data) => {
   if (company) {
     companyFundsEl.textContent = `$${company.funds ?? 0}`;
     companyStockEl.textContent = `${company.stock ?? 0}L`;
-    importMeta.textContent = `الاستيراد: ${company.importLiters ?? 0}L مقابل $${company.importCost ?? 0} | نسبة الشركة: ${company.cutPercent ?? 0}%`;
+    companyReputationEl.textContent = `${company.reputation ?? 0}`;
+    importMeta.textContent = `الاستيراد: ${company.importLiters ?? 0}L مقابل $${company.importCost ?? 0} | نسبة الشركة: ${company.cutPercent ?? 0}% | Fleet: ${company.activeFleet ?? 'standard'} | Shift: ${company.shift ?? 'open'}`;
+    fleetSelect.value = company.activeFleet ?? 'standard';
+    shiftSelect.value = company.shift ?? 'open';
+    renderContracts(company.contracts ?? []);
   }
 
   const min = data.minBatch ?? 1;
@@ -145,7 +178,11 @@ window.addEventListener('message', (event) => {
       currentState.company = data.company;
       companyFundsEl.textContent = `$${data.company.funds ?? 0}`;
       companyStockEl.textContent = `${data.company.stock ?? 0}L`;
-      importMeta.textContent = `الاستيراد: ${data.company.importLiters ?? 0}L مقابل $${data.company.importCost ?? 0} | نسبة الشركة: ${data.company.cutPercent ?? 0}%`;
+      companyReputationEl.textContent = `${data.company.reputation ?? 0}`;
+      importMeta.textContent = `الاستيراد: ${data.company.importLiters ?? 0}L مقابل $${data.company.importCost ?? 0} | نسبة الشركة: ${data.company.cutPercent ?? 0}% | Fleet: ${data.company.activeFleet ?? 'standard'} | Shift: ${data.company.shift ?? 'open'}`;
+      fleetSelect.value = data.company.activeFleet ?? 'standard';
+      shiftSelect.value = data.company.shift ?? 'open';
+      renderContracts(data.company.contracts ?? []);
     }
   }
 
@@ -202,3 +239,6 @@ document.addEventListener('keyup', (e) => {
     post('close');
   }
 });
+
+setFleetBtn.addEventListener('click', () => post('managerAction', { action: 'setFleet', tier: fleetSelect.value }));
+setShiftBtn.addEventListener('click', () => post('managerAction', { action: 'setShift', shift: shiftSelect.value }));

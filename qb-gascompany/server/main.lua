@@ -6,9 +6,22 @@ local missionLock = {}
 local activeMissions = {}
 
 local companyState = {
-    funds = 0,
+    funds = Config.Company.initialFunds or 0,
     stock = Config.Company.initialStock or 0,
+    reputation = Config.Reputation.start or 50,
+    activeFleet = 'standard',
+    shift = Config.Shifts.default or 'open',
+    contracts = {},
+    analytics = {
+        totalMissions = 0,
+        totalPayroll = 0,
+        totalCompanyCut = 0,
+    }
 }
+
+for _, c in ipairs(Config.Contracts or {}) do
+    companyState.contracts[c.id] = { id = c.id, label = c.label, region = c.region, target = c.target, bonusFunds = c.bonusFunds, progress = 0, active = false }
+end
 
 local function isGasEmployee(Player)
     return Player and Player.PlayerData.job and Player.PlayerData.job.name == Config.JobName
@@ -29,6 +42,23 @@ local function copyAndShuffle(items)
     return copy
 end
 
+local function getShiftMultiplier()
+    if not Config.DynamicEconomy.enabled then return 1.0 end
+    local h = tonumber(os.date('%H'))
+    if h >= Config.DynamicEconomy.peakHours.start and h <= Config.DynamicEconomy.peakHours['end'] then
+        return Config.DynamicEconomy.peakPayoutBonus
+    end
+    return 1.0
+end
+
+local function getStockMultiplier()
+    if not Config.DynamicEconomy.enabled then return 1.0 end
+    if companyState.stock <= Config.DynamicEconomy.stockLowThreshold then
+        return Config.DynamicEconomy.lowStockPayoutBonus
+    end
+    return 1.0
+end
+
 local function buildMissionBatch(source, count)
     local pool = Config.Missions.locations
     if #pool == 0 then return nil end
@@ -36,6 +66,7 @@ local function buildMissionBatch(source, count)
     local picked = {}
     local shuffled = copyAndShuffle(pool)
     local cap = math.min(count, #shuffled)
+    local ecoMult = getShiftMultiplier() * getStockMultiplier()
 
     for i = 1, cap do
         local place = shuffled[i]
@@ -46,9 +77,7 @@ local function buildMissionBatch(source, count)
             coords = place.coords,
             use = requested,
             region = place.region or 'city',
-            payoutMult = place.payoutMult or 1.0,
-            talked = false,
-            filled = false,
+            payoutMult = (place.payoutMult or 1.0) * ecoMult,
             startedAt = GetGameTimer(),
             index = i,
             total = cap,
@@ -68,13 +97,23 @@ local function getMaxJobGrade(jobDef)
     return max
 end
 
-local function sendManagerPanel(src)
+local function getEmployeeLevel(xp)
+    return math.floor((xp or 0) / 120) + 1
+end
+
+local function isShiftOpen()
+    local shift = Config.Shifts.list[companyState.shift] or Config.Shifts.list.open
+    local h = tonumber(os.date('%H'))
+    return h >= shift.start and h <= shift['end']
+end
+
+local function makePanelPayload()
     local employees = {}
     local players = QBCore.Functions.GetQBPlayers()
 
     for id, p in pairs(players) do
         if p and isGasEmployee(p) then
-            local info = dutyPlayers[id] or { completed = 0, earned = 0, onDuty = false }
+            local info = dutyPlayers[id] or { completed = 0, earned = 0, onDuty = false, xp = 0 }
             employees[#employees + 1] = {
                 id = id,
                 name = p.PlayerData.charinfo.firstname .. ' ' .. p.PlayerData.charinfo.lastname,
@@ -82,20 +121,32 @@ local function sendManagerPanel(src)
                 completed = info.completed or 0,
                 earned = info.earned or 0,
                 grade = p.PlayerData.job.grade.level or 0,
+                xp = info.xp or 0,
+                level = getEmployeeLevel(info.xp or 0),
             }
         end
     end
 
-    TriggerClientEvent('qb-gascompany:client:panelData', src, {
+    local contracts = {}
+    for _, c in pairs(companyState.contracts) do
+        contracts[#contracts + 1] = c
+    end
+
+    return {
         employees = employees,
         company = {
             funds = companyState.funds,
             stock = companyState.stock,
+            reputation = companyState.reputation,
+            activeFleet = companyState.activeFleet,
+            shift = companyState.shift,
             importCost = Config.Company.import.cost,
             importLiters = Config.Company.import.liters,
             cutPercent = Config.Payments.companyCutPercent,
+            analytics = companyState.analytics,
+            contracts = contracts,
         }
-    })
+    }
 end
 
 RegisterNetEvent('qb-gascompany:server:setDuty', function(toggle)
@@ -103,7 +154,7 @@ RegisterNetEvent('qb-gascompany:server:setDuty', function(toggle)
     local Player = QBCore.Functions.GetPlayer(src)
     if not isGasEmployee(Player) then return end
 
-    dutyPlayers[src] = dutyPlayers[src] or { completed = 0, earned = 0 }
+    dutyPlayers[src] = dutyPlayers[src] or { completed = 0, earned = 0, xp = 0 }
     dutyPlayers[src].onDuty = toggle
 end)
 
@@ -125,6 +176,11 @@ RegisterNetEvent('qb-gascompany:server:requestMission', function(missionCount)
 
     if not dutyPlayers[src] or dutyPlayers[src].onDuty ~= true then
         TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'Start duty first, then request mission.' })
+        return
+    end
+
+    if not isShiftOpen() then
+        TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'Current company shift is closed.' })
         return
     end
 
@@ -152,25 +208,22 @@ RegisterNetEvent('qb-gascompany:server:requestMission', function(missionCount)
     end
 
     TriggerClientEvent('qb-gascompany:client:startMissionBatch', src, missions)
-    TriggerClientEvent('ox_lib:notify', src, {
-        type = 'success',
-        description = ('%s mission(s) assigned.'):format(#missions)
-    })
+    TriggerClientEvent('ox_lib:notify', src, { type = 'success', description = ('%s mission(s) assigned.'):format(#missions) })
 end)
 
 RegisterNetEvent('qb-gascompany:server:finishMission', function(payload)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
     if not isGasEmployee(Player) then return end
-
     if not payload or not payload.missionId then return end
+
     local serverMission = activeMissions[src] and activeMissions[src][payload.missionId]
     if not serverMission then
         TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'Mission validation failed.' })
         return
     end
 
-    dutyPlayers[src] = dutyPlayers[src] or { completed = 0, earned = 0 }
+    dutyPlayers[src] = dutyPlayers[src] or { completed = 0, earned = 0, xp = 0 }
 
     local completed = dutyPlayers[src].completed + 1
     local basePayout = Config.Payments.base + (Config.Payments.perTaskBonus * completed)
@@ -185,10 +238,33 @@ RegisterNetEvent('qb-gascompany:server:finishMission', function(payload)
 
     Player.Functions.AddMoney('bank', playerPayout, 'gas-company-mission')
 
-    companyState.funds = companyState.funds + companyCut
+    local missionSeconds = math.floor((GetGameTimer() - (serverMission.startedAt or GetGameTimer())) / 1000)
+    if missionSeconds <= Config.Reputation.fastMissionSec then
+        companyState.reputation = math.min(Config.Reputation.max, companyState.reputation + Config.Reputation.fastBonus)
+    else
+        companyState.reputation = math.max(Config.Reputation.min, companyState.reputation - Config.Reputation.slowPenalty)
+    end
 
     dutyPlayers[src].completed = completed
     dutyPlayers[src].earned = dutyPlayers[src].earned + playerPayout
+    dutyPlayers[src].xp = (dutyPlayers[src].xp or 0) + 25
+
+    companyState.funds = companyState.funds + companyCut
+    companyState.analytics.totalMissions = companyState.analytics.totalMissions + 1
+    companyState.analytics.totalPayroll = companyState.analytics.totalPayroll + playerPayout
+    companyState.analytics.totalCompanyCut = companyState.analytics.totalCompanyCut + companyCut
+
+    for _, contract in pairs(companyState.contracts) do
+        if contract.active and contract.region == serverMission.region then
+            contract.progress = contract.progress + 1
+            if contract.progress >= contract.target then
+                contract.active = false
+                contract.progress = 0
+                companyState.funds = companyState.funds + contract.bonusFunds
+                TriggerClientEvent('ox_lib:notify', src, { type = 'success', description = ('Contract %s completed! +$%s company funds.'):format(contract.label, contract.bonusFunds) })
+            end
+        end
+    end
 
     activeMissions[src][payload.missionId] = nil
 
@@ -199,6 +275,8 @@ RegisterNetEvent('qb-gascompany:server:finishMission', function(payload)
         companyCut = companyCut,
         region = serverMission.region,
         multiplier = serverMission.payoutMult or 1.0,
+        xp = dutyPlayers[src].xp,
+        level = getEmployeeLevel(dutyPlayers[src].xp),
     })
 end)
 
@@ -208,8 +286,6 @@ RegisterNetEvent('qb-gascompany:server:requestRefill', function(requiredUnits)
     if not isGasEmployee(Player) then return end
 
     local amount = math.max(1, math.floor(tonumber(requiredUnits) or 0))
-    if amount <= 0 then return end
-
     if companyState.stock < amount then
         TriggerClientEvent('qb-gascompany:client:refillResult', src, false, companyState.stock)
         return
@@ -239,49 +315,69 @@ RegisterNetEvent('qb-gascompany:server:managerAction', function(data)
         if target and isGasEmployee(target) then
             target.Functions.SetJob('unemployed', 0)
         end
+
     elseif data.action == 'promote' and data.target then
         local target = QBCore.Functions.GetPlayer(tonumber(data.target))
         if target and isGasEmployee(target) then
             local grade = target.PlayerData.job.grade.level or 0
-            local jobDef = QBCore.Shared.Jobs[Config.JobName]
-            local maxGrade = getMaxJobGrade(jobDef)
+            local maxGrade = getMaxJobGrade(QBCore.Shared.Jobs[Config.JobName])
             if grade < maxGrade then
                 target.Functions.SetJob(Config.JobName, grade + 1)
-                TriggerClientEvent('ox_lib:notify', src, { type = 'success', description = 'Employee promoted successfully.' })
-                TriggerClientEvent('ox_lib:notify', target.PlayerData.source, { type = 'success', description = 'You have been promoted in Gas Company.' })
-            else
-                TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'Employee is already at max grade.' })
             end
         end
+
     elseif data.action == 'companyWithdraw' then
         local amount = math.floor(tonumber(data.amount) or 0)
-        if amount <= 0 then return end
-        if companyState.funds < amount then
-            TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'Company balance is not enough.' })
-            return
+        if amount > 0 and companyState.funds >= amount then
+            companyState.funds = companyState.funds - amount
+            Player.Functions.AddMoney('bank', amount, 'gas-company-manager-withdraw')
         end
 
-        companyState.funds = companyState.funds - amount
-        Player.Functions.AddMoney('bank', amount, 'gas-company-manager-withdraw')
-        TriggerClientEvent('ox_lib:notify', src, { type = 'success', description = ('You withdrew $%s from company funds.'):format(amount) })
     elseif data.action == 'companyImport' then
         local cost = Config.Company.import.cost
         local liters = Config.Company.import.liters
-
-        if companyState.funds < cost then
-            TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'Not enough company funds for gas import.' })
-            return
+        if companyState.funds >= cost then
+            companyState.funds = companyState.funds - cost
+            companyState.stock = companyState.stock + liters
         end
 
-        companyState.funds = companyState.funds - cost
-        companyState.stock = companyState.stock + liters
-        TriggerClientEvent('ox_lib:notify', src, { type = 'success', description = ('Imported %sL gas for $%s.'):format(liters, cost) })
-    elseif data.action == 'panel' then
-        sendManagerPanel(src)
-        return
+    elseif data.action == 'setFleet' and data.tier and Config.FleetTiers[data.tier] then
+        companyState.activeFleet = data.tier
+
+    elseif data.action == 'setShift' and data.shift and Config.Shifts.list[data.shift] then
+        companyState.shift = data.shift
+
+    elseif data.action == 'toggleContract' and data.contractId and companyState.contracts[data.contractId] then
+        local c = companyState.contracts[data.contractId]
+        c.active = not c.active
+        if c.active then c.progress = 0 end
     end
 
-    sendManagerPanel(src)
+    TriggerClientEvent('qb-gascompany:client:panelData', src, makePanelPayload())
+end)
+
+CreateThread(function()
+    while true do
+        Wait((Config.OperatingCosts.intervalMinutes or 30) * 60000)
+        if Config.OperatingCosts.enabled then
+            local cost = Config.OperatingCosts.baseCost + ((Config.FleetTiers[companyState.activeFleet] and Config.FleetTiers[companyState.activeFleet].upkeep) or 0)
+            companyState.funds = math.max(0, companyState.funds - cost)
+        end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        Wait((Config.Alerts.intervalMinutes or 20) * 60000)
+        if Config.Alerts.enabled and #Config.Alerts.messages > 0 then
+            local msg = Config.Alerts.messages[math.random(1, #Config.Alerts.messages)]
+            for id, info in pairs(dutyPlayers) do
+                if info.onDuty then
+                    TriggerClientEvent('ox_lib:notify', id, { type = 'inform', description = msg })
+                end
+            end
+        end
+    end
 end)
 
 AddEventHandler('playerDropped', function()
@@ -291,6 +387,7 @@ AddEventHandler('playerDropped', function()
         local Player = QBCore.Functions.GetPlayer(src)
         if Player then
             Player.Functions.RemoveMoney('bank', Config.Truck.penaltyForNoReturn, 'gas-company-truck-penalty')
+            companyState.reputation = math.max(Config.Reputation.min, companyState.reputation - 2)
         end
     end
 
