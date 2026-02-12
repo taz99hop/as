@@ -35,7 +35,17 @@
 
       <div class="actions">
         <button id="dutyBtn" class="primary">بدء الدوام</button>
-        <button id="missionBtn">طلب مهمة</button>
+        <div class="mission-picker">
+          <label for="missionCount">عدد المواقع</label>
+          <select id="missionCount">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+        <button id="missionBtn">بدء المسار</button>
       </div>
 
       <section id="managerBox" class="manager hidden">

@@ -13,22 +13,51 @@ local function isBoss(Player)
     return Config.BossGrades[grade] == true
 end
 
-local function getRandomMission(source)
+local function copyAndShuffle(items)
+    local copy = {}
+    for i = 1, #items do copy[i] = items[i] end
+    for i = #copy, 2, -1 do
+        local j = math.random(1, i)
+        copy[i], copy[j] = copy[j], copy[i]
+    end
+    return copy
+end
+
+local function buildMissionBatch(source, count)
     local pool = Config.Missions.locations
     if #pool == 0 then return nil end
 
-    local pick = pool[math.random(1, #pool)]
-    local requested = pick.use or math.random(Config.Truck.missionUse.min, Config.Truck.missionUse.max)
+    local picked = {}
+    local shuffled = copyAndShuffle(pool)
+    local cap = math.min(count, #shuffled)
 
-    return {
-        id = ('%s-%s'):format(source, os.time()),
-        label = pick.label,
-        coords = pick.coords,
-        use = requested,
-        talked = false,
-        filled = false,
-        startedAt = GetGameTimer(),
-    }
+    for i = 1, cap do
+        local place = shuffled[i]
+        local requested = place.use or math.random(Config.Truck.missionUse.min, Config.Truck.missionUse.max)
+        picked[#picked + 1] = {
+            id = ('%s-%s-%s'):format(source, os.time(), i),
+            label = place.label,
+            coords = place.coords,
+            use = requested,
+            talked = false,
+            filled = false,
+            startedAt = GetGameTimer(),
+            index = i,
+            total = cap,
+        }
+    end
+
+    return picked
+end
+
+local function getMaxJobGrade(jobDef)
+    if not jobDef or not jobDef.grades then return 0 end
+    local max = 0
+    for gradeKey, _ in pairs(jobDef.grades) do
+        local g = tonumber(gradeKey) or 0
+        if g > max then max = g end
+    end
+    return max
 end
 
 RegisterNetEvent('qb-gascompany:server:setDuty', function(toggle)
@@ -40,15 +69,15 @@ RegisterNetEvent('qb-gascompany:server:setDuty', function(toggle)
     dutyPlayers[src].onDuty = toggle
 end)
 
-RegisterNetEvent('qb-gascompany:server:registerTruck', function(netId)
+RegisterNetEvent('qb-gascompany:server:registerTruck', function(netId, trailerNetId)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
     if not isGasEmployee(Player) then return end
 
-    trucks[src] = { netId = netId, returned = false }
+    trucks[src] = { netId = netId, trailerNetId = trailerNetId, returned = false }
 end)
 
-RegisterNetEvent('qb-gascompany:server:requestMission', function()
+RegisterNetEvent('qb-gascompany:server:requestMission', function(missionCount)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
     if not isGasEmployee(Player) then
@@ -68,17 +97,21 @@ RegisterNetEvent('qb-gascompany:server:requestMission', function()
         return
     end
 
+    local count = tonumber(missionCount) or 1
+    count = math.floor(count)
+    count = math.max(Config.Missions.minBatch or 1, math.min(Config.Missions.maxBatch or 5, count))
+
     missionLock[src] = os.time()
-    local mission = getRandomMission(src)
-    if not mission then
+    local missions = buildMissionBatch(src, count)
+    if not missions or #missions == 0 then
         TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'No mission locations configured.' })
         return
     end
 
-    TriggerClientEvent('qb-gascompany:client:startMission', src, mission)
+    TriggerClientEvent('qb-gascompany:client:startMissionBatch', src, missions)
     TriggerClientEvent('ox_lib:notify', src, {
         type = 'success',
-        description = ('Mission assigned: %s'):format(mission.label)
+        description = ('%s mission(s) assigned.'):format(#missions)
     })
 end)
 
@@ -128,17 +161,34 @@ RegisterNetEvent('qb-gascompany:server:managerAction', function(data)
         if target and isGasEmployee(target) then
             target.Functions.SetJob('unemployed', 0)
         end
+    elseif data.action == 'promote' and data.target then
+        local target = QBCore.Functions.GetPlayer(tonumber(data.target))
+        if target and isGasEmployee(target) then
+            local grade = target.PlayerData.job.grade.level or 0
+            local jobDef = QBCore.Shared.Jobs[Config.JobName]
+            local maxGrade = getMaxJobGrade(jobDef)
+            if grade < maxGrade then
+                target.Functions.SetJob(Config.JobName, grade + 1)
+                TriggerClientEvent('ox_lib:notify', src, { type = 'success', description = 'Employee promoted successfully.' })
+                TriggerClientEvent('ox_lib:notify', target.PlayerData.source, { type = 'success', description = 'You have been promoted in Gas Company.' })
+            else
+                TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'Employee is already at max grade.' })
+            end
+        end
     elseif data.action == 'panel' then
         local employees = {}
-        for id, info in pairs(dutyPlayers) do
-            local p = QBCore.Functions.GetPlayer(id)
+        local players = QBCore.Functions.GetQBPlayers()
+
+        for id, p in pairs(players) do
             if p and isGasEmployee(p) then
+                local info = dutyPlayers[id] or { completed = 0, earned = 0, onDuty = false }
                 employees[#employees + 1] = {
                     id = id,
                     name = p.PlayerData.charinfo.firstname .. ' ' .. p.PlayerData.charinfo.lastname,
                     onDuty = info.onDuty == true,
-                    completed = info.completed,
-                    earned = info.earned
+                    completed = info.completed or 0,
+                    earned = info.earned or 0,
+                    grade = p.PlayerData.job.grade.level or 0,
                 }
             end
         end

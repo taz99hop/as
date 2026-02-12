@@ -8,6 +8,7 @@ Config.BossGrades = { [4] = true }
 Config.Duty = {
     hub = vec3(1184.06, -330.12, 69.32),
     truckSpawn = vec4(1174.79, -330.86, 69.17, 96.0),
+    trailerSpawn = vec4(1168.60, -330.50, 69.17, 96.0),
     returnPoint = vec3(1171.95, -320.77, 69.18),
     stash = vec3(1187.42, -317.91, 69.18)
 }
@@ -37,7 +38,8 @@ Config.Tools = {
 }
 
 Config.Truck = {
-    model = 'mule3',
+    model = 'phantom',
+    trailerModel = 'tanker',
     maxGasUnits = 100,
     missionUse = { min = 12, max = 26 },
     penaltyForNoReturn = 400,
@@ -55,6 +57,8 @@ Config.Payments = {
 
 Config.Missions = {
     cooldownSec = 6,
+    minBatch = 1,
+    maxBatch = 5,
     locations = {
         { label = 'Vinewood #11', coords = vec4(298.52, -208.14, 54.09, 156.0), use = 18 },
         { label = 'Alta #7', coords = vec4(350.02, -589.66, 43.28, 250.0), use = 14 },
@@ -75,7 +79,8 @@ Config.Peds = {
 Config.Objects = {
     stationTank = 'prop_gas_tank_04a',
     cone = 'prop_roadcone02a',
-    hoseStand = 'prop_gas_pump_1d'
+    hoseStand = 'prop_gas_pump_1d',
+    missionTank = 'prop_gas_tank_04a'
 }
 
 Config.AntiExploit = {

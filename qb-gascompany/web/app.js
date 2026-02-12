@@ -1,6 +1,7 @@
 const app = document.getElementById('app');
 const dutyBtn = document.getElementById('dutyBtn');
 const missionBtn = document.getElementById('missionBtn');
+const missionCount = document.getElementById('missionCount');
 const closeBtn = document.getElementById('closeBtn');
 const managerBox = document.getElementById('managerBox');
 const employeesEl = document.getElementById('employees');
@@ -32,14 +33,23 @@ const renderEmployees = (employees = []) => {
   employees.forEach((emp) => {
     const li = document.createElement('li');
     const info = document.createElement('div');
-    info.innerHTML = `<strong>${emp.name}</strong><small>مهام: ${emp.completed} | أرباح: $${emp.earned}</small>`;
+    info.innerHTML = `<strong>${emp.name}</strong><small>رتبة: ${emp.grade} | مهام: ${emp.completed} | أرباح: $${emp.earned}</small>`;
+
+    const controls = document.createElement('div');
+
+    const promote = document.createElement('button');
+    promote.textContent = 'ترقية';
+    promote.addEventListener('click', () => post('managerAction', { action: 'promote', target: emp.id }));
 
     const fire = document.createElement('button');
     fire.textContent = 'طرد';
     fire.addEventListener('click', () => post('managerAction', { action: 'kick', target: emp.id }));
 
+    controls.appendChild(promote);
+    controls.appendChild(fire);
+
     li.appendChild(info);
-    li.appendChild(fire);
+    li.appendChild(controls);
     employeesEl.appendChild(li);
   });
 };
@@ -50,8 +60,19 @@ const syncPanel = (data) => {
   earningsEl.textContent = `$${data.stats?.earned ?? 0}`;
   gasEl.textContent = data.gasUnits ?? 0;
   dutyBtn.textContent = data.onDuty ? 'إنهاء الدوام' : 'بدء الدوام';
-
   managerBox.classList.toggle('hidden', !data.isBoss);
+
+  const min = data.minBatch ?? 1;
+  const max = data.maxBatch ?? 5;
+  missionCount.innerHTML = '';
+  for (let i = min; i <= max; i += 1) {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = String(i);
+    missionCount.appendChild(opt);
+  }
+  const preferred = String(Math.min(Math.max(3, min), max));
+  missionCount.value = preferred;
 };
 
 window.addEventListener('message', (event) => {
@@ -62,8 +83,8 @@ window.addEventListener('message', (event) => {
     syncPanel(data);
   }
 
-  if (action === 'refresh') {
-    if (data.employees) renderEmployees(data.employees);
+  if (action === 'refresh' && data.employees) {
+    renderEmployees(data.employees);
   }
 });
 
@@ -79,7 +100,7 @@ dutyBtn.addEventListener('click', () => {
   post('toggleDuty', { value });
 });
 
-missionBtn.addEventListener('click', () => post('requestMission'));
+missionBtn.addEventListener('click', () => post('requestMission', { count: Number(missionCount.value || 1) }));
 refreshEmployeesBtn.addEventListener('click', () => post('managerAction', { action: 'panel' }));
 
 document.addEventListener('keyup', (e) => {

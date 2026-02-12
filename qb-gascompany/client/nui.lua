@@ -8,8 +8,8 @@ RegisterNUICallback('toggleDuty', function(data, cb)
     cb(true)
 end)
 
-RegisterNUICallback('requestMission', function(_, cb)
-    TriggerServerEvent('qb-gascompany:server:requestMission')
+RegisterNUICallback('requestMission', function(data, cb)
+    TriggerServerEvent('qb-gascompany:server:requestMission', data and data.count or 1)
     cb(true)
 end)
 
