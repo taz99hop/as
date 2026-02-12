@@ -6,6 +6,12 @@ const closeBtn = document.getElementById('closeBtn');
 const managerBox = document.getElementById('managerBox');
 const employeesEl = document.getElementById('employees');
 const refreshEmployeesBtn = document.getElementById('refreshEmployees');
+const companyFundsEl = document.getElementById('companyFunds');
+const companyStockEl = document.getElementById('companyStock');
+const withdrawAmountEl = document.getElementById('withdrawAmount');
+const withdrawBtn = document.getElementById('withdrawBtn');
+const importBtn = document.getElementById('importBtn');
+const importMeta = document.getElementById('importMeta');
 
 const tasksEl = document.getElementById('tasks');
 const earningsEl = document.getElementById('earnings');
@@ -21,7 +27,7 @@ const fillLabel = document.getElementById('fillLabel');
 const fillBarFill = document.getElementById('fillBarFill');
 
 let fillTimer = null;
-let currentState = { onDuty: false, isBoss: false };
+let currentState = { onDuty: false, isBoss: false, company: null };
 
 const post = async (event, data = {}) => {
   await fetch(`https://${GetParentResourceName()}/${event}`, {
@@ -104,6 +110,14 @@ const syncPanel = (data) => {
   dutyBtn.textContent = data.onDuty ? 'إنهاء الدوام' : 'بدء الدوام';
   managerBox.classList.toggle('hidden', !data.isBoss);
 
+  const company = data.company ?? currentState.company ?? null;
+  currentState.company = company;
+  if (company) {
+    companyFundsEl.textContent = `$${company.funds ?? 0}`;
+    companyStockEl.textContent = `${company.stock ?? 0}L`;
+    importMeta.textContent = `الاستيراد: ${company.importLiters ?? 0}L مقابل $${company.importCost ?? 0} | نسبة الشركة: ${company.cutPercent ?? 0}%`;
+  }
+
   const min = data.minBatch ?? 1;
   const max = data.maxBatch ?? 5;
   missionCount.innerHTML = '';
@@ -125,8 +139,14 @@ window.addEventListener('message', (event) => {
     syncPanel(data);
   }
 
-  if (action === 'refresh' && data.employees) {
-    renderEmployees(data.employees);
+  if (action === 'refresh') {
+    if (data.employees) renderEmployees(data.employees);
+    if (data.company) {
+      currentState.company = data.company;
+      companyFundsEl.textContent = `$${data.company.funds ?? 0}`;
+      companyStockEl.textContent = `${data.company.stock ?? 0}L`;
+      importMeta.textContent = `الاستيراد: ${data.company.importLiters ?? 0}L مقابل $${data.company.importCost ?? 0} | نسبة الشركة: ${data.company.cutPercent ?? 0}%`;
+    }
   }
 
   if (action === 'tankHudShow') {
@@ -164,6 +184,13 @@ dutyBtn.addEventListener('click', () => {
 
 missionBtn.addEventListener('click', () => post('requestMission', { count: Number(missionCount.value || 1) }));
 refreshEmployeesBtn.addEventListener('click', () => post('managerAction', { action: 'panel' }));
+
+withdrawBtn.addEventListener('click', () => {
+  const amount = Number(withdrawAmountEl.value || 0);
+  if (amount > 0) post('managerAction', { action: 'companyWithdraw', amount });
+});
+
+importBtn.addEventListener('click', () => post('managerAction', { action: 'companyImport' }));
 
 document.addEventListener('keyup', (e) => {
   if (e.key === 'Escape') {

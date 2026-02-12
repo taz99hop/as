@@ -48,10 +48,19 @@ Config.Truck = {
 Config.Payments = {
     base = 240,
     perTaskBonus = 50,
+    companyCutPercent = 22, -- نسبة الشركة من كل مهمة
     milestone = {
         [5] = 300,
         [10] = 750,
         [20] = 1800,
+    }
+}
+
+Config.Company = {
+    initialStock = 800,
+    import = {
+        liters = 500,
+        cost = 9000,
     }
 }
 
@@ -60,14 +69,21 @@ Config.Missions = {
     minBatch = 1,
     maxBatch = 5,
     locations = {
-        { label = 'Vinewood #11', coords = vec4(298.52, -208.14, 54.09, 156.0), use = 18 },
-        { label = 'Alta #7', coords = vec4(350.02, -589.66, 43.28, 250.0), use = 14 },
-        { label = 'Mirror Park #4', coords = vec4(1016.52, -525.88, 60.17, 210.0), use = 16 },
-        { label = 'Rockford Office', coords = vec4(-827.44, -702.15, 28.06, 90.0), use = 20 },
-        { label = 'Del Perro Cafe', coords = vec4(-1281.48, -1138.44, 6.95, 115.0), use = 22 },
-        { label = 'Vespucci #2', coords = vec4(-1164.58, -1458.34, 4.43, 20.0), use = 15 },
-        { label = 'La Mesa #15', coords = vec4(722.54, -1088.52, 22.18, 268.0), use = 19 },
-        { label = 'Sandy Housing #6', coords = vec4(1675.52, 4958.26, 42.34, 138.0), use = 24 },
+        { label = 'Vinewood #11', region = 'city', payoutMult = 1.00, coords = vec4(298.52, -208.14, 54.09, 156.0), use = 18 },
+        { label = 'Alta #7', region = 'city', payoutMult = 1.00, coords = vec4(350.02, -589.66, 43.28, 250.0), use = 14 },
+        { label = 'Mirror Park #4', region = 'city', payoutMult = 1.00, coords = vec4(1016.52, -525.88, 60.17, 210.0), use = 16 },
+        { label = 'Rockford Office', region = 'city', payoutMult = 1.00, coords = vec4(-827.44, -702.15, 28.06, 90.0), use = 20 },
+        { label = 'Del Perro Cafe', region = 'city', payoutMult = 1.00, coords = vec4(-1281.48, -1138.44, 6.95, 115.0), use = 22 },
+        { label = 'Vespucci #2', region = 'city', payoutMult = 1.00, coords = vec4(-1164.58, -1458.34, 4.43, 20.0), use = 15 },
+        { label = 'La Mesa #15', region = 'city', payoutMult = 1.00, coords = vec4(722.54, -1088.52, 22.18, 268.0), use = 19 },
+
+        -- Sandy (أعلى أجر)
+        { label = 'Sandy Housing #6', region = 'sandy', payoutMult = 1.45, coords = vec4(1675.52, 4958.26, 42.34, 138.0), use = 24 },
+        { label = 'Sandy Market', region = 'sandy', payoutMult = 1.40, coords = vec4(1963.24, 3740.92, 32.34, 122.0), use = 21 },
+
+        -- Paleto
+        { label = 'Paleto Bay House #3', region = 'paleto', payoutMult = 1.15, coords = vec4(-130.35, 6471.28, 31.58, 312.0), use = 20 },
+        { label = 'Paleto Workshop', region = 'paleto', payoutMult = 1.20, coords = vec4(96.13, 6618.59, 32.44, 46.0), use = 23 },
     }
 }
 

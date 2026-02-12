@@ -18,7 +18,8 @@ local state = {
         completed = 0,
         earned = 0,
         totalGasUsed = 0,
-    }
+    },
+    refillPending = false,
 }
 
 local function notify(msg, type)
@@ -287,6 +288,8 @@ local function refillTrailerTank()
         return
     end
 
+    local need = Config.Truck.maxGasUnits - state.gasUnits
+
     local done = lib.progressBar({
         duration = 4500,
         label = 'Refilling trailer tank...',
@@ -296,14 +299,27 @@ local function refillTrailerTank()
     })
 
     if done then
-        state.gasUnits = Config.Truck.maxGasUnits
-        syncGasState()
-        notify('Trailer tank filled successfully.', 'success')
+        state.refillPending = true
+        TriggerServerEvent('qb-gascompany:server:requestRefill', need)
     end
 end
 
 RegisterNetEvent('qb-gascompany:client:spawnTruck', spawnTruck)
 RegisterNetEvent('qb-gascompany:client:refillTrailerTank', refillTrailerTank)
+
+
+RegisterNetEvent('qb-gascompany:client:refillResult', function(success, stockLeft)
+    state.refillPending = false
+
+    if not success then
+        notify(('Company stock is low. Available liters: %s'):format(stockLeft or 0), 'error')
+        return
+    end
+
+    state.gasUnits = Config.Truck.maxGasUnits
+    syncGasState()
+    notify(('Trailer refilled. Company stock left: %sL'):format(stockLeft or 0), 'success')
+end)
 
 RegisterNetEvent('qb-gascompany:client:startMissionBatch', function(missions)
     if not missions or #missions == 0 then
@@ -394,7 +410,7 @@ end)
 RegisterNetEvent('qb-gascompany:client:missionRewarded', function(data)
     state.stats.completed = data.completed
     state.stats.earned = data.earned
-    notify(('Customer paid $%s | Total shift: $%s'):format(data.payout, data.earned), 'success')
+    notify(('Customer paid $%s | Company cut $%s | Total shift: $%s'):format(data.payout, data.companyCut or 0, data.earned), 'success')
 end)
 
 RegisterNetEvent('qb-gascompany:client:setDuty', function(toggle)
@@ -465,6 +481,8 @@ RegisterNetEvent('qb-gascompany:client:missionRequested', function()
 end)
 
 RegisterNetEvent('qb-gascompany:client:openPanel', function()
+    local isBoss = Config.BossGrades[(QBCore.Functions.GetPlayerData().job.grade.level or 0)] == true
+
     SetNuiFocus(true, true)
     SendNUIMessage({
         action = 'open',
@@ -476,9 +494,13 @@ RegisterNetEvent('qb-gascompany:client:openPanel', function()
             queueCount = #state.missionQueue,
             minBatch = Config.Missions.minBatch or 1,
             maxBatch = Config.Missions.maxBatch or 5,
-            isBoss = Config.BossGrades[(QBCore.Functions.GetPlayerData().job.grade.level or 0)] == true
+            isBoss = isBoss
         }
     })
+
+    if isBoss then
+        TriggerServerEvent('qb-gascompany:server:managerAction', { action = 'panel' })
+    end
 end)
 
 CreateThread(function()

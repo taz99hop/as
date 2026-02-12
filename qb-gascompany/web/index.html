@@ -64,6 +64,18 @@
       <section id="managerBox" class="manager hidden">
         <h2>إدارة الموظفين</h2>
         <button id="refreshEmployees">تحديث القائمة</button>
+
+        <div class="company-box">
+          <h3>مالية الشركة</h3>
+          <p>رصيد الشركة: <strong id="companyFunds">$0</strong></p>
+          <p>مخزون الغاز: <strong id="companyStock">0L</strong></p>
+          <div class="company-actions">
+            <input id="withdrawAmount" type="number" min="1" placeholder="مبلغ سحب" />
+            <button id="withdrawBtn">سحب للمدير</button>
+            <button id="importBtn">استيراد غاز</button>
+          </div>
+          <small id="importMeta"></small>
+        </div>
         <ul id="employees"></ul>
       </section>
     </section>
