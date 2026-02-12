@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gas Company Panel</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside id="tankHud" class="tank-hud hidden">
+    <div class="tank-title">خزان المقطورة</div>
+    <div class="tank-number"><span id="tankLiters">0</span> / <span id="tankMax">100</span> لتر</div>
+    <div class="tank-bar"><i id="tankBarFill"></i></div>
+  </aside>
+
+  <section id="fillOverlay" class="fill-overlay hidden">
+    <div class="fill-card">
+      <h3 id="fillLabel">تعبئة الغاز</h3>
+      <div class="fill-bar"><i id="fillBarFill"></i></div>
+    </div>
+  </section>
+
+  <main id="app" class="hidden">
+    <div class="glass"></div>
+    <section class="panel">
+      <header>
+        <div>
+          <h1>لوحة شركة الغاز</h1>
+          <p>واجهة إدارة وتشغيل الموظفين</p>
+        </div>
+        <button id="closeBtn">✕</button>
+      </header>
+
+      <div class="cards">
+        <article>
+          <span>المهام المنفذة</span>
+          <strong id="tasks">0</strong>
+        </article>
+        <article>
+          <span>إجمالي الأرباح</span>
+          <strong id="earnings">$0</strong>
+        </article>
+        <article>
+          <span>وحدات الغاز المتاحة</span>
+          <strong id="gas">0</strong>
+        </article>
+      </div>
+
+      <div class="actions">
+        <button id="dutyBtn" class="primary">بدء الدوام</button>
+        <div class="mission-picker">
+          <label for="missionCount">عدد المواقع</label>
+          <select id="missionCount">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+        <button id="missionBtn">بدء المسار</button>
+      </div>
+
+      <section id="managerBox" class="manager hidden">
+        <h2>إدارة الموظفين</h2>
+        <button id="refreshEmployees">تحديث القائمة</button>
+
+        <div class="company-box">
+          <h3>مالية الشركة</h3>
+          <p>رصيد الشركة: <strong id="companyFunds">$0</strong></p>
+          <p>مخزون الغاز: <strong id="companyStock">0L</strong></p>
+          <div class="company-actions">
+            <input id="withdrawAmount" type="number" min="1" placeholder="مبلغ سحب" />
+            <button id="withdrawBtn">سحب للمدير</button>
+            <button id="importBtn">استيراد غاز</button>
+          </div>
+          <small id="importMeta"></small>
+        </div>
+
+        <div class="company-box">
+          <h3>تشغيل الشركة</h3>
+          <div class="company-actions">
+            <select id="fleetSelect">
+              <option value="standard">Standard Fleet</option>
+              <option value="heavy">Heavy Fleet</option>
+            </select>
+            <button id="setFleetBtn">تعيين الأسطول</button>
+          </div>
+          <div class="company-actions">
+            <select id="shiftSelect">
+              <option value="open">Open</option>
+              <option value="morning">Morning</option>
+              <option value="evening">Evening</option>
+            </select>
+            <button id="setShiftBtn">تعيين الشفت</button>
+          </div>
+          <p>السمعة: <strong id="companyReputation">0</strong></p>
+        </div>
+
+        <div class="company-box">
+          <h3>العقود</h3>
+          <ul id="contractsList"></ul>
+        </div>
+
+        <ul id="employees"></ul>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
