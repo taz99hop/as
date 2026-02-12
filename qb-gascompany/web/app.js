@@ -168,6 +168,10 @@ window.addEventListener('message', (event) => {
   if (action === 'fillEnd') {
     stopFillOverlay();
   }
+
+  if (action === 'closePanel') {
+    app.classList.add('hidden');
+  }
 });
 
 closeBtn.addEventListener('click', () => {
@@ -193,7 +197,7 @@ withdrawBtn.addEventListener('click', () => {
 importBtn.addEventListener('click', () => post('managerAction', { action: 'companyImport' }));
 
 document.addEventListener('keyup', (e) => {
-  if (e.key === 'Escape') {
+  if (e.key === 'Escape' || e.key === 'Backspace') {
     app.classList.add('hidden');
     post('close');
   }

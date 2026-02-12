@@ -1,5 +1,5 @@
 RegisterNUICallback('close', function(_, cb)
-    SetNuiFocus(false, false)
+    TriggerEvent('qb-gascompany:client:closePanel')
     cb(true)
 end)
 

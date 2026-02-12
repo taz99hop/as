@@ -20,6 +20,7 @@ local state = {
         totalGasUsed = 0,
     },
     refillPending = false,
+    panelOpen = false,
 }
 
 local function notify(msg, type)
@@ -47,6 +48,14 @@ local function showHelp(msg)
     BeginTextCommandDisplayHelp('STRING')
     AddTextComponentSubstringPlayerName(msg)
     EndTextCommandDisplayHelp(0, false, true, 1)
+end
+
+local function closePanel()
+    if not state.panelOpen then return end
+    state.panelOpen = false
+    SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
+    SendNUIMessage({ action = 'closePanel' })
 end
 
 local function removeMissionBlip()
@@ -483,7 +492,11 @@ end)
 RegisterNetEvent('qb-gascompany:client:openPanel', function()
     local isBoss = Config.BossGrades[(QBCore.Functions.GetPlayerData().job.grade.level or 0)] == true
 
+    state.panelOpen = true
     SetNuiFocus(true, true)
+    SetNuiFocusKeepInput(false)
+    SetCursorLocation(0.5, 0.5)
+
     SendNUIMessage({
         action = 'open',
         data = {
@@ -502,6 +515,8 @@ RegisterNetEvent('qb-gascompany:client:openPanel', function()
         TriggerServerEvent('qb-gascompany:server:managerAction', { action = 'panel' })
     end
 end)
+
+RegisterNetEvent('qb-gascompany:client:closePanel', closePanel)
 
 CreateThread(function()
     while true do
@@ -546,7 +561,24 @@ CreateThread(function()
     end
 end)
 
+CreateThread(function()
+    while true do
+        if state.panelOpen then
+            Wait(0)
+            DisableControlAction(0, 1, true)
+            DisableControlAction(0, 2, true)
+            if IsControlJustReleased(0, 200) or IsControlJustReleased(0, 177) then
+                closePanel()
+                Wait(150)
+            end
+        else
+            Wait(250)
+        end
+    end
+end)
+
 RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
+    closePanel()
     cleanupObjects()
     stopDuty(true)
 end)
