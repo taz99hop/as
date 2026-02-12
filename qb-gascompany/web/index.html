@@ -7,6 +7,19 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <aside id="tankHud" class="tank-hud hidden">
+    <div class="tank-title">خزان المقطورة</div>
+    <div class="tank-number"><span id="tankLiters">0</span> / <span id="tankMax">100</span> لتر</div>
+    <div class="tank-bar"><i id="tankBarFill"></i></div>
+  </aside>
+
+  <section id="fillOverlay" class="fill-overlay hidden">
+    <div class="fill-card">
+      <h3 id="fillLabel">تعبئة الغاز</h3>
+      <div class="fill-bar"><i id="fillBarFill"></i></div>
+    </div>
+  </section>
+
   <main id="app" class="hidden">
     <div class="glass"></div>
     <section class="panel">

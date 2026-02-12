@@ -11,6 +11,16 @@ const tasksEl = document.getElementById('tasks');
 const earningsEl = document.getElementById('earnings');
 const gasEl = document.getElementById('gas');
 
+const tankHud = document.getElementById('tankHud');
+const tankLiters = document.getElementById('tankLiters');
+const tankMax = document.getElementById('tankMax');
+const tankBarFill = document.getElementById('tankBarFill');
+
+const fillOverlay = document.getElementById('fillOverlay');
+const fillLabel = document.getElementById('fillLabel');
+const fillBarFill = document.getElementById('fillBarFill');
+
+let fillTimer = null;
 let currentState = { onDuty: false, isBoss: false };
 
 const post = async (event, data = {}) => {
@@ -54,6 +64,38 @@ const renderEmployees = (employees = []) => {
   });
 };
 
+const setTankHud = (liters = 0, max = 100) => {
+  const safeMax = Math.max(max, 1);
+  const ratio = Math.max(0, Math.min(100, (liters / safeMax) * 100));
+  tankLiters.textContent = String(liters);
+  tankMax.textContent = String(max);
+  tankBarFill.style.width = `${ratio}%`;
+};
+
+const startFillOverlay = (duration = 5000, label = 'تعبئة الغاز') => {
+  if (fillTimer) clearInterval(fillTimer);
+  fillOverlay.classList.remove('hidden');
+  fillLabel.textContent = label;
+  fillBarFill.style.width = '0%';
+
+  const started = Date.now();
+  fillTimer = setInterval(() => {
+    const elapsed = Date.now() - started;
+    const pct = Math.max(0, Math.min(100, (elapsed / duration) * 100));
+    fillBarFill.style.width = `${pct}%`;
+    if (pct >= 100) {
+      clearInterval(fillTimer);
+      fillTimer = null;
+    }
+  }, 40);
+};
+
+const stopFillOverlay = () => {
+  if (fillTimer) clearInterval(fillTimer);
+  fillTimer = null;
+  fillOverlay.classList.add('hidden');
+};
+
 const syncPanel = (data) => {
   currentState = data;
   tasksEl.textContent = data.stats?.completed ?? 0;
@@ -85,6 +127,26 @@ window.addEventListener('message', (event) => {
 
   if (action === 'refresh' && data.employees) {
     renderEmployees(data.employees);
+  }
+
+  if (action === 'tankHudShow') {
+    tankHud.classList.remove('hidden');
+  }
+
+  if (action === 'tankHudHide') {
+    tankHud.classList.add('hidden');
+  }
+
+  if (action === 'tankHud') {
+    setTankHud(data?.liters ?? 0, data?.max ?? 100);
+  }
+
+  if (action === 'fillStart') {
+    startFillOverlay(data?.duration ?? 5000, data?.label ?? 'تعبئة الغاز');
+  }
+
+  if (action === 'fillEnd') {
+    stopFillOverlay();
   }
 });
 

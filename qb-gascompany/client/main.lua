@@ -11,7 +11,6 @@ local state = {
     missionQueue = {},
     missionBlip = nil,
     npc = nil,
-    missionObject = nil,
     hasNozzle = false,
     nozzleProp = nil,
     stationObjects = {},
@@ -24,6 +23,15 @@ local state = {
 
 local function notify(msg, type)
     lib.notify({ description = msg, type = type or 'inform' })
+end
+
+local function syncGasState()
+    LocalPlayer.state:set('gasUnits', state.gasUnits, true)
+    SendNUIMessage({ action = 'tankHud', data = { liters = state.gasUnits, max = Config.Truck.maxGasUnits } })
+end
+
+local function syncTruckState()
+    LocalPlayer.state:set('gasTruckActive', state.truck and DoesEntityExist(state.truck) or false, true)
 end
 
 local function loadModel(model)
@@ -54,13 +62,6 @@ local function deleteMissionNpc()
     state.npc = nil
 end
 
-local function deleteMissionObject()
-    if state.missionObject and DoesEntityExist(state.missionObject) then
-        DeleteObject(state.missionObject)
-    end
-    state.missionObject = nil
-end
-
 local function cleanupObjects()
     for _, obj in pairs(state.stationObjects) do
         if DoesEntityExist(obj) then
@@ -82,7 +83,6 @@ local function stopDuty(clearTruck)
     state.onDuty = false
     removeMissionBlip()
     deleteMissionNpc()
-    deleteMissionObject()
     detachNozzle()
     state.mission = nil
     state.missionQueue = {}
@@ -98,6 +98,9 @@ local function stopDuty(clearTruck)
     state.trailerNetId = nil
     state.gasUnits = 0
 
+    syncTruckState()
+    SendNUIMessage({ action = 'tankHudHide' })
+    syncGasState()
     LocalPlayer.state:set('gasDuty', false, true)
     TriggerServerEvent('qb-gascompany:server:setDuty', false)
 end
@@ -172,18 +175,6 @@ local function createMissionPed(mission)
     SetModelAsNoLongerNeeded(hash)
 end
 
-local function createMissionObject(mission)
-    deleteMissionObject()
-    local hash = loadModel(Config.Objects.missionTank)
-    if not hash then return end
-
-    local objPos = GetOffsetFromEntityInWorldCoords(state.npc, 0.9, 0.0, -1.0)
-    state.missionObject = CreateObjectNoOffset(hash, objPos.x, objPos.y, objPos.z, false, false, false)
-    FreezeEntityPosition(state.missionObject, true)
-    SetEntityHeading(state.missionObject, mission.coords.w)
-    SetModelAsNoLongerNeeded(hash)
-end
-
 local function createMissionBlip(mission)
     removeMissionBlip()
     local blip = AddBlipForCoord(mission.coords.x, mission.coords.y, mission.coords.z)
@@ -204,7 +195,6 @@ local function beginMission(mission)
     state.mission = mission
     detachNozzle()
     createMissionPed(mission)
-    createMissionObject(mission)
     createMissionBlip(mission)
     notify(('Go to %s (%s/%s).'):format(mission.label, mission.index or 1, mission.total or 1), 'success')
 end
@@ -217,9 +207,20 @@ local function proceedNextMission()
         state.mission = nil
         removeMissionBlip()
         deleteMissionNpc()
-        deleteMissionObject()
         notify('All selected delivery locations are complete.', 'success')
     end
+end
+
+local function applyVehicleKeyOwnership(veh, plate)
+    SetVehicleNumberPlateText(veh, plate)
+    SetVehicleDoorsLocked(veh, 1)
+    SetVehicleNeedsToBeHotwired(veh, false)
+    SetVehicleHasBeenOwnedByPlayer(veh, true)
+
+    TriggerEvent('vehiclekeys:client:SetOwner', plate)
+    TriggerEvent('qb-vehiclekeys:client:AddKeys', plate)
+    TriggerEvent('qb-vehiclekeys:client:SetOwner', plate)
+    TriggerServerEvent('qb-vehiclekeys:server:AcquireVehicleKeys', plate)
 end
 
 local function spawnTruck()
@@ -242,27 +243,54 @@ local function spawnTruck()
     SetVehicleDirtLevel(trailer, 0.0)
 
     local plate = ('GAS%03d'):format(math.random(100, 999))
-    SetVehicleNumberPlateText(truck, plate)
-    SetVehicleDoorsLocked(truck, 1)
-    SetVehicleEngineOn(truck, true, true, false)
-
+    applyVehicleKeyOwnership(truck, plate)
     SetVehicleNumberPlateText(trailer, plate)
     AttachVehicleToTrailer(truck, trailer, 1.1)
 
-    TriggerEvent('vehiclekeys:client:SetOwner', plate)
-    TriggerEvent('qb-vehiclekeys:client:AddKeys', plate)
+    local ped = PlayerPedId()
+    TaskWarpPedIntoVehicle(ped, truck, -1)
+    SetVehicleEngineOn(truck, true, true, false)
 
     state.truck = truck
     state.trailer = trailer
     state.truckNetId = VehToNet(truck)
     state.trailerNetId = VehToNet(trailer)
     state.gasUnits = Config.Truck.maxGasUnits
+    syncTruckState()
+    syncGasState()
 
     TriggerServerEvent('qb-gascompany:server:registerTruck', state.truckNetId, state.trailerNetId)
     notify('تم استلام رأس شاحنة مع مقطورة غاز.', 'success')
 end
 
+local function refillTrailerTank()
+    if not state.trailer or not DoesEntityExist(state.trailer) then
+        notify('Spawn truck and trailer first.', 'error')
+        return
+    end
+
+    if state.gasUnits >= Config.Truck.maxGasUnits then
+        notify('Trailer tank already full.', 'inform')
+        return
+    end
+
+    local done = lib.progressBar({
+        duration = 4500,
+        label = 'Refilling trailer tank...',
+        useWhileDead = false,
+        canCancel = true,
+        disable = { move = true, car = true, combat = true }
+    })
+
+    if done then
+        state.gasUnits = Config.Truck.maxGasUnits
+        syncGasState()
+        notify('Trailer tank filled successfully.', 'success')
+    end
+end
+
 RegisterNetEvent('qb-gascompany:client:spawnTruck', spawnTruck)
+RegisterNetEvent('qb-gascompany:client:refillTrailerTank', refillTrailerTank)
 
 RegisterNetEvent('qb-gascompany:client:startMissionBatch', function(missions)
     if not missions or #missions == 0 then
@@ -292,7 +320,7 @@ RegisterNetEvent('qb-gascompany:client:talkToNpc', function()
     TaskTurnPedToFaceEntity(state.npc, PlayerPedId(), 2000)
     Wait(650)
     state.mission.talked = true
-    notify('Customer is waiting. Bring nozzle from trailer and fill the tank object.', 'inform')
+    notify('Customer is waiting. Grab nozzle from trailer, then press E to fill.', 'inform')
 end)
 
 RegisterNetEvent('qb-gascompany:client:pickupNozzle', function()
@@ -315,7 +343,7 @@ RegisterNetEvent('qb-gascompany:client:pickupNozzle', function()
     state.hasNozzle = true
     SetModelAsNoLongerNeeded(hash)
 
-    notify('Nozzle picked up. Go to mission tank near customer.', 'success')
+    notify('Nozzle picked up. Return to customer and start filling.', 'success')
 end)
 
 RegisterNetEvent('qb-gascompany:client:startFill', function()
@@ -332,23 +360,29 @@ RegisterNetEvent('qb-gascompany:client:startFill', function()
     end
 
     if not state.gasUnits or state.gasUnits < state.mission.use then
-        notify('Your trailer gas is not enough for this order.', 'error')
+        notify('Trailer tank empty. Refill at company station.', 'error')
         return
     end
 
+    local duration = 5500
+    SendNUIMessage({ action = 'fillStart', data = { duration = duration, label = 'تعبئة الغاز للعميل' } })
+
     local done = lib.progressBar({
-        duration = 5500,
-        label = ('Filling gas (%s units)...'):format(state.mission.use),
+        duration = duration,
+        label = 'Filling gas... ',
         useWhileDead = false,
         canCancel = true,
         disable = { move = true, car = true, combat = true }
     })
 
+    SendNUIMessage({ action = 'fillEnd' })
+
     if done then
         state.mission.filled = true
         state.gasUnits = state.gasUnits - state.mission.use
         state.stats.totalGasUsed = state.stats.totalGasUsed + state.mission.use
-        notify('تمت التعبئة. ارجع للمدني لاستلام الدفعة.', 'success')
+        syncGasState()
+        notify('تمت التعبئة. ارجع للمدني لاستلام الدفع.', 'success')
     else
         notify('تم إلغاء التعبئة.', 'error')
     end
@@ -369,7 +403,6 @@ RegisterNetEvent('qb-gascompany:client:finishMission', function()
 
     detachNozzle()
     deleteMissionNpc()
-    deleteMissionObject()
     proceedNextMission()
 end)
 
@@ -423,6 +456,9 @@ RegisterNetEvent('qb-gascompany:client:returnTruck', function()
     state.truckNetId = nil
     state.trailerNetId = nil
     state.gasUnits = 0
+    syncTruckState()
+    SendNUIMessage({ action = 'tankHudHide' })
+    syncGasState()
 
     notify('تم إرجاع الشاحنة والمقطورة بنجاح.', 'success')
 end)
@@ -477,25 +513,10 @@ CreateThread(function()
                     if not state.mission.talked then
                         TriggerEvent('qb-gascompany:client:talkToNpc')
                     elseif not state.mission.filled then
-                        notify('Fill the nearby tank object first.', 'error')
+                        TriggerEvent('qb-gascompany:client:startFill')
                     else
                         TriggerEvent('qb-gascompany:client:finishMission')
                     end
-                    Wait(250)
-                end
-            end
-        end
-
-        if state.onDuty and state.mission and state.missionObject and DoesEntityExist(state.missionObject) then
-            local pos = GetEntityCoords(PlayerPedId())
-            local objPos = GetEntityCoords(state.missionObject)
-            local dist = #(pos - objPos)
-            if dist <= 2.2 then
-                waitMs = 0
-                DrawMarker(2, objPos.x, objPos.y, objPos.z + 0.35, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.18, 0.18, 0.18, 52, 211, 153, 180, false, true, 2, false, nil, nil, false)
-                showHelp('Press ~INPUT_CONTEXT~ to fill mission tank object')
-                if IsControlJustReleased(0, 38) then
-                    TriggerEvent('qb-gascompany:client:startFill')
                     Wait(250)
                 end
             end
@@ -520,6 +541,19 @@ CreateThread(function()
     end
 end)
 
+CreateThread(function()
+    while true do
+        Wait(250)
+        local ped = PlayerPedId()
+        if state.truck and DoesEntityExist(state.truck) and GetVehiclePedIsIn(ped, false) == state.truck then
+            SendNUIMessage({ action = 'tankHudShow' })
+            SendNUIMessage({ action = 'tankHud', data = { liters = state.gasUnits, max = Config.Truck.maxGasUnits } })
+        else
+            SendNUIMessage({ action = 'tankHudHide' })
+        end
+    end
+end)
+
 RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
     cleanupObjects()
     stopDuty(true)
@@ -529,6 +563,8 @@ CreateThread(function()
     while not LocalPlayer.state.isLoggedIn do Wait(500) end
 
     TriggerEvent('qb-gascompany:client:setupTargets')
+    syncGasState()
+    syncTruckState()
 
     CreateThread(function()
         while true do
@@ -542,7 +578,7 @@ CreateThread(function()
                     state.missionQueue = {}
                     removeMissionBlip()
                     deleteMissionNpc()
-                    deleteMissionObject()
+                    SendNUIMessage({ action = 'fillEnd' })
                 end
             end
         end

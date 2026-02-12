@@ -47,10 +47,20 @@ CreateThread(function()
             if onDuty and isNear(Config.Duty.truckSpawn.xyz, 3.5) then
                 waitMs = 0
                 drawMarkerAt(Config.Duty.truckSpawn.xyz)
-                showHelp('Press ~INPUT_CONTEXT~ to take the gas truck')
+                local gasUnits = LocalPlayer.state.gasUnits or 0
+                local hasTruck = LocalPlayer.state.gasTruckActive == true
+                if hasTruck and gasUnits <= 0 and onDuty then
+                    showHelp('Press ~INPUT_CONTEXT~ to refill trailer tank')
+                else
+                    showHelp('Press ~INPUT_CONTEXT~ to take the gas truck')
+                end
 
                 if IsControlJustReleased(0, INTERACT_KEY) then
-                    TriggerEvent('qb-gascompany:client:spawnTruck')
+                    if hasTruck and gasUnits <= 0 and onDuty then
+                        TriggerEvent('qb-gascompany:client:refillTrailerTank')
+                    else
+                        TriggerEvent('qb-gascompany:client:spawnTruck')
+                    end
                     Wait(250)
                 end
             end
