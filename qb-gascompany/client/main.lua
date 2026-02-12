@@ -167,26 +167,35 @@ end
 local function ensureTruckNearby()
     local ped = PlayerPedId()
     if not state.truck or not DoesEntityExist(state.truck) then
-        notify('لا يوجد شاحنة فعالة.', 'error')
+        notify('No active gas truck found.', 'error')
         return false
     end
 
     local dist = #(GetEntityCoords(ped) - GetEntityCoords(state.truck))
     if dist > 20.0 then
-        notify('اقترب من شاحنة الغاز أولاً.', 'error')
+        notify('Get closer to your gas truck first.', 'error')
         return false
     end
     return true
 end
 
 RegisterNetEvent('qb-gascompany:client:startMission', function(mission)
-    if not state.onDuty then return end
+    if not mission or not mission.coords then
+        notify('Mission data is invalid, ask admin to check config.', 'error')
+        return
+    end
+
+    if not state.onDuty then
+        notify('You must be on duty first.', 'error')
+        return
+    end
 
     state.mission = mission
     createMissionBlip(mission)
+    SetNewWaypoint(mission.coords.x, mission.coords.y)
     createMissionPed(mission)
 
-    notify(('مهمة جديدة: %s | الكمية المطلوبة: %s'):format(mission.label, mission.use), 'success')
+    notify(('New mission: %s | Gas needed: %s'):format(mission.label, mission.use), 'success')
 end)
 
 RegisterNetEvent('qb-gascompany:client:talkToNpc', function()
@@ -222,7 +231,7 @@ RegisterNetEvent('qb-gascompany:client:startFill', function()
     if not state.mission or state.mission.filled or not state.mission.talked then return end
     if not ensureTruckNearby() then return end
     if state.gasUnits < state.mission.use then
-        notify('كمية الغاز في الشاحنة غير كافية.', 'error')
+        notify('Truck gas units are not enough for this job.', 'error')
         return
     end
 
@@ -317,6 +326,11 @@ RegisterNetEvent('qb-gascompany:client:returnTruck', function()
     notify('تم إرجاع الشاحنة بنجاح.', 'success')
 end)
 
+
+RegisterNetEvent('qb-gascompany:client:missionRequested', function()
+    notify('Mission request sent. Please wait...', 'inform')
+end)
+
 RegisterNetEvent('qb-gascompany:client:openPanel', function()
     SetNuiFocus(true, true)
     SendNUIMessage({
@@ -350,7 +364,7 @@ CreateThread(function()
 
             if dist <= 2.0 then
                 waitMs = 0
-                showHelp('اضغط ~INPUT_CONTEXT~ للتفاعل مع المدني')
+                showHelp('Press ~INPUT_CONTEXT~ to interact with customer')
 
                 if IsControlJustReleased(0, 38) then
                     if not state.mission.talked then

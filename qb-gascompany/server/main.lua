@@ -51,18 +51,35 @@ end)
 RegisterNetEvent('qb-gascompany:server:requestMission', function()
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
-    if not isGasEmployee(Player) then return end
+    if not isGasEmployee(Player) then
+        TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'You are not a gas company employee.' })
+        return
+    end
+
+    if not dutyPlayers[src] or dutyPlayers[src].onDuty ~= true then
+        TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'Start duty first, then request mission.' })
+        return
+    end
+
+    TriggerClientEvent('qb-gascompany:client:missionRequested', src)
 
     if missionLock[src] and os.time() - missionLock[src] < Config.Missions.cooldownSec then
-        TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'انتظر قبل طلب مهمة جديدة.' })
+        TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'Please wait before requesting another mission.' })
         return
     end
 
     missionLock[src] = os.time()
     local mission = getRandomMission(src)
-    if not mission then return end
+    if not mission then
+        TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = 'No mission locations configured.' })
+        return
+    end
 
     TriggerClientEvent('qb-gascompany:client:startMission', src, mission)
+    TriggerClientEvent('ox_lib:notify', src, {
+        type = 'success',
+        description = ('Mission assigned: %s'):format(mission.label)
+    })
 end)
 
 RegisterNetEvent('qb-gascompany:server:finishMission', function(payload)

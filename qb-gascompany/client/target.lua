@@ -32,7 +32,7 @@ CreateThread(function()
             if isNear(Config.Duty.hub, 2.0) then
                 waitMs = 0
                 drawMarkerAt(Config.Duty.hub)
-                showHelp('اضغط ~INPUT_CONTEXT~ لبدء/إنهاء الدوام أو فتح لوحة شركة الغاز')
+                showHelp('Press ~INPUT_CONTEXT~ for duty toggle (Shift + E opens panel)')
 
                 if IsControlJustReleased(0, INTERACT_KEY) then
                     if IsControlPressed(0, 21) then
@@ -47,7 +47,7 @@ CreateThread(function()
             if onDuty and isNear(Config.Duty.truckSpawn.xyz, 3.5) then
                 waitMs = 0
                 drawMarkerAt(Config.Duty.truckSpawn.xyz)
-                showHelp('اضغط ~INPUT_CONTEXT~ لاستلام شاحنة الغاز')
+                showHelp('Press ~INPUT_CONTEXT~ to take the gas truck')
 
                 if IsControlJustReleased(0, INTERACT_KEY) then
                     TriggerEvent('qb-gascompany:client:spawnTruck')
@@ -55,10 +55,10 @@ CreateThread(function()
                 end
             end
 
-            if onDuty and isNear(Config.Duty.stash, 2.2) then
+            if onDuty and isNear(Config.Duty.stash, 3.5) then
                 waitMs = 0
                 drawMarkerAt(Config.Duty.stash)
-                showHelp('اضغط ~INPUT_CONTEXT~ لاستلام مهمة جديدة')
+                showHelp('Press ~INPUT_CONTEXT~ to request a delivery mission')
 
                 if IsControlJustReleased(0, INTERACT_KEY) then
                     TriggerServerEvent('qb-gascompany:server:requestMission')
@@ -66,10 +66,10 @@ CreateThread(function()
                 end
             end
 
-            if onDuty and isNear(Config.Duty.returnPoint, 2.5) then
+            if onDuty and isNear(Config.Duty.returnPoint, 3.5) then
                 waitMs = 0
                 drawMarkerAt(Config.Duty.returnPoint)
-                showHelp('اضغط ~INPUT_CONTEXT~ لإرجاع الشاحنة')
+                showHelp('Press ~INPUT_CONTEXT~ to return the truck')
 
                 if IsControlJustReleased(0, INTERACT_KEY) then
                     TriggerEvent('qb-gascompany:client:returnTruck')
@@ -98,7 +98,7 @@ CreateThread(function()
                     drawMarkerAt(rearPos)
 
                     local doorAngle = GetVehicleDoorAngleRatio(closestVeh, 5)
-                    local text = doorAngle > 0.01 and 'اضغط ~INPUT_CONTEXT~ لإغلاق خزان الشاحنة' or 'اضغط ~INPUT_CONTEXT~ لفتح خزان الشاحنة'
+                    local text = doorAngle > 0.01 and 'Press ~INPUT_CONTEXT~ to close truck tank' or 'Press ~INPUT_CONTEXT~ to open truck tank'
                     showHelp(text)
 
                     if IsControlJustReleased(0, INTERACT_KEY) then
