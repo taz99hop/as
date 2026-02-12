@@ -149,41 +149,7 @@ local function createMissionPed(mission)
     SetBlockingOfNonTemporaryEvents(state.npc, true)
     TaskStartScenarioInPlace(state.npc, Config.Peds.scenario, 0, true)
 
-    exports[Config.Target]:AddTargetEntity(state.npc, {
-        options = {
-            {
-                icon = 'fa-solid fa-comments',
-                label = 'التحدث مع المدني',
-                action = function()
-                    TriggerEvent('qb-gascompany:client:talkToNpc')
-                end,
-                canInteract = function(entity, distance)
-                    return distance <= Config.AntiExploit.maxDistanceToInteract and state.mission and not state.mission.talked
-                end
-            },
-            {
-                icon = 'fa-solid fa-gas-pump',
-                label = 'بدء تعبئة الغاز',
-                action = function()
-                    TriggerEvent('qb-gascompany:client:startFill')
-                end,
-                canInteract = function(entity, distance)
-                    return distance <= Config.AntiExploit.maxDistanceToInteract and state.mission and state.mission.talked and not state.mission.filled
-                end
-            },
-            {
-                icon = 'fa-solid fa-check',
-                label = 'إنهاء المهمة',
-                action = function()
-                    TriggerEvent('qb-gascompany:client:finishMission')
-                end,
-                canInteract = function(entity, distance)
-                    return distance <= Config.AntiExploit.maxDistanceToInteract and state.mission and state.mission.filled
-                end
-            }
-        },
-        distance = 2.0
-    })
+    TriggerEvent('qb-gascompany:client:addNpcTarget', state.npc)
 
     SetModelAsNoLongerNeeded(hash)
 end
@@ -311,6 +277,12 @@ RegisterNetEvent('qb-gascompany:client:missionRewarded', function(data)
 end)
 
 RegisterNetEvent('qb-gascompany:client:setDuty', function(toggle)
+    local playerJob = QBCore.Functions.GetPlayerData().job
+    if not playerJob or playerJob.name ~= Config.JobName then
+        notify('هذه النقطة خاصة بموظفي شركة الغاز.', 'error')
+        return
+    end
+
     if toggle and not state.onDuty then
         state.onDuty = true
         drawHubObjects()
