@@ -1,0 +1,16 @@
+body { margin: 0; font-family: 'Tahoma', sans-serif; color: #d5e8d4; }
+.hidden { display: none !important; }
+#app { position: fixed; inset: 0; }
+.overlay { position: absolute; inset: 0; background: rgba(4, 18, 7, 0.65); }
+.panel { position: relative; margin: 2vh auto; width: 90vw; max-width: 1300px; background: rgba(16, 31, 17, 0.95); border: 1px solid #315637; border-radius: 12px; padding: 16px; }
+header { display: flex; justify-content: space-between; align-items: center; }
+button { background: #325a38; color: #fff; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+.grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+article { background: rgba(0, 0, 0, 0.2); border: 1px solid #2b4f31; border-radius: 8px; padding: 8px; min-height: 190px; }
+.list { max-height: 180px; overflow: auto; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 6px; }
+.row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.card { background: #1c3b22; padding: 8px; border-radius: 6px; }
+.missile-grid { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 6px; margin: 8px 0; }
+input, select { background: #0f2212; color: #d5e8d4; border: 1px solid #33553a; border-radius: 6px; padding: 6px; }
+canvas { background: radial-gradient(circle, rgba(27,78,39,0.4), rgba(0,0,0,0.9)); border: 1px solid #35603f; border-radius: 50%; }
+.jam { position: absolute; bottom: 16px; left: 16px; background: #812020; color: white; padding: 8px 10px; border-radius: 8px; }

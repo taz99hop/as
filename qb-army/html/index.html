@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Army Command</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app" class="hidden">
+    <div class="overlay"></div>
+    <div class="panel">
+      <header>
+        <h1>نظام قيادة الجيش</h1>
+        <button id="close">إغلاق</button>
+      </header>
+
+      <section class="row" id="overview"></section>
+
+      <section class="grid">
+        <article>
+          <h3>الأفراد المتصلون</h3>
+          <div id="personnel" class="list"></div>
+        </article>
+        <article>
+          <h3>إدارة المهام</h3>
+          <select id="missionSelect"></select>
+          <div class="actions">
+            <button id="startMission">بدء</button>
+            <button id="completeMission">إنهاء</button>
+          </div>
+          <h4>إطلاق صاروخ</h4>
+          <div class="missile-grid">
+            <input id="mx" placeholder="X" />
+            <input id="my" placeholder="Y" />
+            <input id="mz" placeholder="Z" />
+            <button id="launch">إطلاق</button>
+          </div>
+          <label><input type="checkbox" id="domeAuto" checked /> اعتراض تلقائي</label>
+        </article>
+        <article>
+          <h3>سجل التنبيهات</h3>
+          <div id="alerts" class="list"></div>
+        </article>
+      </section>
+
+      <section>
+        <h3>الرادار العسكري (500m)</h3>
+        <canvas id="radar" width="280" height="280"></canvas>
+      </section>
+
+      <section>
+        <h3>تتبع الفريق</h3>
+        <div id="troops" class="list"></div>
+      </section>
+
+      <div id="jamBanner" class="jam hidden">⚠️ تشويش إلكتروني نشط</div>
+    </div>
+  </div>
+  <script src="js/app.js"></script>
+</body>
+</html>
