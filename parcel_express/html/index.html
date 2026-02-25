@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parcel Express Tablet</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="app" class="hidden">
+        <div class="tablet">
+            <header>
+                <div>
+                    <h1>Parcel Express</h1>
+                    <p id="welcome">مرحباً بك</p>
+                </div>
+                <button id="closeBtn">إغلاق</button>
+            </header>
+
+            <nav>
+                <button class="tab active" data-tab="driver">لوحة السائق</button>
+                <button class="tab" data-tab="manager" id="managerTab">لوحة المدير</button>
+            </nav>
+
+            <section id="driver" class="tab-content active">
+                <div class="grid">
+                    <article><span>الطرود المسلمة</span><strong id="delivered">0</strong></article>
+                    <article><span>الأرباح الإجمالية</span><strong id="earnings">$0</strong></article>
+                    <article><span>التقييم</span><strong id="rating">0 / 5</strong></article>
+                    <article><span>مستوى السائق</span><strong id="level">1</strong></article>
+                    <article><span>السائقون المتصلون</span><strong id="onlineDrivers">0</strong></article>
+                    <article><span>المهام النشطة</span><strong id="activeTasks">0</strong></article>
+                </div>
+
+                <div class="actions">
+                    <button id="dutyBtn">تسجيل دخول الدوام</button>
+                </div>
+            </section>
+
+            <section id="manager" class="tab-content">
+                <div class="manager-cards">
+                    <article>
+                        <span>أرباح اليوم</span>
+                        <strong id="dayProfit">$0</strong>
+                    </article>
+                </div>
+
+                <div class="manager-actions">
+                    <h3>تعديل الراتب الأساسي</h3>
+                    <div class="inline">
+                        <input id="basePay" type="number" min="20" max="300" value="95" />
+                        <button id="saveBasePay">حفظ</button>
+                    </div>
+
+                    <h3>فصل موظف</h3>
+                    <div class="inline">
+                        <input id="fireTarget" type="number" placeholder="ID اللاعب" />
+                        <button id="fireDriver">تنفيذ</button>
+                    </div>
+
+                    <h3>إعادة تعيين إحصائيات</h3>
+                    <div class="inline">
+                        <input id="resetCitizen" type="text" placeholder="CitizenID" />
+                        <button id="resetStats">تنفيذ</button>
+                    </div>
+                </div>
+
+                <h3>السائقون على الدوام</h3>
+                <div id="driversList" class="drivers"></div>
+            </section>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

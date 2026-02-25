@@ -1,0 +1,165 @@
+* {
+    box-sizing: border-box;
+    font-family: 'Tajawal', sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.hidden {
+    display: none;
+}
+
+#app {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tablet {
+    width: 900px;
+    min-height: 580px;
+    background: linear-gradient(160deg, #0e121b, #111827);
+    border: 2px solid #2b3547;
+    border-radius: 18px;
+    color: #eef2ff;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+    padding: 18px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+header p {
+    margin: 4px 0 0;
+    color: #a8b4cb;
+}
+
+button {
+    background: #1f2937;
+    color: #eef2ff;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #263244;
+}
+
+nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.tab.active {
+    background: #2563eb;
+    border-color: #60a5fa;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+article {
+    background: #141b28;
+    border: 1px solid #293343;
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+article span {
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+article strong {
+    color: #f8fafc;
+    font-size: 22px;
+}
+
+.actions {
+    margin-top: 14px;
+}
+
+.actions button {
+    width: 100%;
+    background: #16a34a;
+    border-color: #22c55e;
+    font-size: 18px;
+}
+
+.manager-actions {
+    margin-top: 12px;
+    background: #101826;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.manager-actions h3 {
+    margin: 6px 0;
+    font-size: 16px;
+}
+
+.inline {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.inline input {
+    flex: 1;
+    background: #0b1220;
+    border: 1px solid #334155;
+    color: #fff;
+    border-radius: 8px;
+    padding: 9px;
+}
+
+.drivers {
+    margin-top: 12px;
+    max-height: 170px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.driver-row {
+    background: #141b28;
+    border: 1px solid #334155;
+    padding: 8px 10px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+}
