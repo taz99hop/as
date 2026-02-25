@@ -186,7 +186,8 @@ RegisterNetEvent('qb-fbi:server:runAction', function(data)
             createdAt = os.time()
         }
         stats.callsHandled = stats.callsHandled + 1
-        notify(src, 'تم إرسال دعم ذكي للموقع.', 'success')
+        TriggerClientEvent('qb-fbi:client:spawnBackupUnits', src)
+        notify(src, 'تم إرسال دعم ذكي للموقع مع وحدات NPC.', 'success')
     elseif action == 'forensics_step' and hasPermission(player, 'canUseForensics') then
         local caseData = state.cases[data.caseId]
         if caseData and caseData.timeline[data.step] then
@@ -217,7 +218,8 @@ RegisterNetEvent('qb-fbi:server:runAction', function(data)
             createdAt = os.time()
         }
         stats.evidenceTagged = stats.evidenceTagged + 1
-        notify(src, 'تم حفظ تسجيل الدرون كدليل.', 'success')
+        TriggerClientEvent('qb-fbi:client:startDroneMode', src)
+        notify(src, 'تم تفعيل كاميرا الدرون وتخزين التسجيل كدليل.', 'success')
     elseif action == 'tag_evidence' and hasPermission(player, 'canTagEvidence') then
         local id = ('EVD-%s'):format(os.time())
         state.evidence[id] = {
@@ -239,7 +241,8 @@ RegisterNetEvent('qb-fbi:server:runAction', function(data)
             area = data.area or 'غير محدد',
             createdAt = os.time()
         }
-        notify(src, 'نفذت وحدة K9 الأمر المطلوب.', 'success')
+        TriggerClientEvent('qb-fbi:client:executeK9Command', src, data.command or 'تتبع مسار')
+        notify(src, 'نفذت وحدة K9 الأمر المطلوب ميدانياً.', 'success')
     elseif action == 'pursuit_tool' and hasPermission(player, 'canUsePursuitTools') then
         local id = ('INC-%s'):format(os.time())
         state.incidents[id] = {
@@ -250,7 +253,8 @@ RegisterNetEvent('qb-fbi:server:runAction', function(data)
             createdAt = os.time()
         }
         stats.pursuits = stats.pursuits + 1
-        notify(src, 'تم نشر أدوات المطاردة بنجاح.', 'success')
+        TriggerClientEvent('qb-fbi:client:deployPursuitTool', src, data.tool or 'Road Block')
+        notify(src, 'تم نشر أدوات المطاردة فعلياً.', 'success')
     elseif action == 'academy_run' and hasPermission(player, 'canRunAcademy') then
         local id = ('TRN-%s'):format(os.time())
         state.academyRuns[id] = {
@@ -273,6 +277,7 @@ RegisterNetEvent('qb-fbi:server:runAction', function(data)
             priority = data.priority,
             createdAt = os.time()
         }
+        TriggerClientEvent('qb-fbi:client:notify', src, ('تم إرسال التوجيه للدورية %s باتجاه %s'):format(data.unit or '-', data.zone or '-'), 'primary')
         notify(src, 'تم توزيع الدورية من مركز القيادة.', 'success')
     elseif action == 'shift_report' and hasPermission(player, 'canGenerateReports') then
         local report = createReportForPlayer(player)

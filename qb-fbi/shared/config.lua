@@ -107,3 +107,29 @@ Config.QuickActions = {
     { key = 'academy', label = 'أكاديمية الشرطة', icon = '🎯' },
     { key = 'reports', label = 'تقارير نهاية الشفت', icon = '📄' }
 }
+
+Config.Dispatch = {
+    backupVehicle = 'police3',
+    backupPed = 's_m_y_cop_01'
+}
+
+Config.K9 = {
+    model = 'a_c_shepherd'
+}
+
+Config.Pursuit = {
+    spikeModel = 'p_ld_stinger_s',
+    barrierModel = 'prop_barrier_work06a',
+    roadBlockVehicle = 'police'
+}
+
+Config.DroneBridgeCams = {
+    {
+        pos = vector3(469.5, -1023.1, 42.0),
+        lookAt = vector3(447.0, -1001.0, 30.0)
+    },
+    {
+        pos = vector3(2518.6, -415.7, 101.2),
+        lookAt = vector3(2486.4, -406.0, 93.0)
+    }
+}
