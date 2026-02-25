@@ -18,6 +18,8 @@ Parcel.State = {
     managerBlips = {}
 }
 
+Parcel.UIOpen = false
+
 local function isParcelJob()
     return Parcel.PlayerData.job and Parcel.PlayerData.job.name == Config.JobName
 end
@@ -35,6 +37,7 @@ local function openTablet()
         return notify('هذه الواجهة خاصة بموظفي Parcel Express فقط.', 'error')
     end
 
+    Parcel.UIOpen = true
     SetNuiFocus(true, true)
     SendNUIMessage({
         action = Shared.NUIActions.OPEN,
@@ -54,23 +57,31 @@ local function openTablet()
 end
 
 local function closeTablet()
+    Parcel.UIOpen = false
     SetNuiFocus(false, false)
     SendNUIMessage({ action = Shared.NUIActions.CLOSE })
 end
 
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
     Parcel.PlayerData = QBCore.Functions.GetPlayerData()
+    closeTablet()
+
+    if not isParcelJob() then
+        TriggerEvent('parcel_express:client:forceCleanup', true)
+    end
 end)
 
 RegisterNetEvent('QBCore:Client:OnJobUpdate', function(job)
     Parcel.PlayerData.job = job
     if job.name ~= Config.JobName then
+        closeTablet()
         TriggerEvent('parcel_express:client:forceCleanup', true)
     end
 end)
 
 CreateThread(function()
     Parcel.PlayerData = QBCore.Functions.GetPlayerData()
+    closeTablet()
 
     exports['qb-target']:AddBoxZone('parcel_express_duty', Config.Warehouse.duty, 1.2, 1.2, {
         name = 'parcel_express_duty',
@@ -123,6 +134,12 @@ RegisterNUICallback('close', function(_, cb)
 end)
 
 RegisterNUICallback('toggleDuty', function(_, cb)
+    if not isParcelJob() then
+        closeTablet()
+        cb('ok')
+        return
+    end
+
     TriggerServerEvent('parcel_express:server:toggleDuty')
     cb('ok')
 end)
@@ -162,6 +179,8 @@ RegisterNetEvent('parcel_express:client:updateDutyState', function(state)
 end)
 
 RegisterNetEvent('parcel_express:client:tabletData', function(data)
+    if not Parcel.UIOpen or not isParcelJob() then return end
+
     Parcel.State.delivered = data.delivered or Parcel.State.delivered
     Parcel.State.earnings = data.earnings or Parcel.State.earnings
     Parcel.State.rating = data.rating or Parcel.State.rating
@@ -194,6 +213,8 @@ RegisterNetEvent('parcel_express:client:notify', function(message, messageType)
 end)
 
 RegisterNetEvent('parcel_express:client:updateStats', function(payload)
+    if not isParcelJob() then return end
+
     Parcel.State.delivered = payload.delivered
     Parcel.State.earnings = payload.earnings
     Parcel.State.rating = payload.rating
@@ -212,6 +233,10 @@ RegisterNetEvent('parcel_express:client:updateStats', function(payload)
 end)
 
 RegisterCommand('parcel', function()
+    if not isParcelJob() then
+        return
+    end
+
     openTablet()
 end, false)
 
@@ -247,4 +272,9 @@ CreateThread(function()
             TriggerServerEvent('parcel_express:server:managerTrackDrivers')
         end
     end
+end)
+
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    closeTablet()
 end)

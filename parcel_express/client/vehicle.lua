@@ -43,7 +43,8 @@ local function spawnVehicle()
 end
 
 local function returnVehicle()
-    if Parcel.State.dutyVehicle and DoesEntityExist(Parcel.State.dutyVehicle) then
+    local hadVehicle = Parcel.State.dutyVehicle and DoesEntityExist(Parcel.State.dutyVehicle)
+    if hadVehicle then
         DeleteVehicle(Parcel.State.dutyVehicle)
     end
 
@@ -51,13 +52,17 @@ local function returnVehicle()
     Parcel.State.dutyVehicle = nil
     Parcel.State.dutyPlate = nil
     TriggerServerEvent('parcel_express:server:setVehiclePlate', nil)
-    QBCore.Functions.Notify('تم إنهاء مركبة الدوام.', 'primary')
+    if hadVehicle then
+        QBCore.Functions.Notify('تم إنهاء مركبة الدوام.', 'primary')
+    end
 end
 
 RegisterNetEvent('parcel_express:client:forceCleanup', function(fromJobChange)
+    local hadDutyState = Parcel.State.onDuty or Parcel.State.hasVehicle or Parcel.State.packagesLoaded > 0 or Parcel.State.activeRoute ~= nil
+
     TriggerEvent('parcel_express:client:stopDelivery', true)
     returnVehicle()
-    if fromJobChange then
+    if fromJobChange and hadDutyState then
         QBCore.Functions.Notify('تم تنظيف حالة الوظيفة لتغيير المسمى الوظيفي.', 'error')
     end
 end)
