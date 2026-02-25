@@ -1,85 +1,106 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FBI Intel Terminal</title>
+  <title>Smart Dispatch Command Center</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <div id="app" class="hidden">
-    <div class="overlay"></div>
-    <div class="frame">
-      <header>
-        <div>
-          <h1>FEDERAL BUREAU OF INVESTIGATION</h1>
-          <p>Classified Intelligence Network</p>
+    <div class="screen-bg"></div>
+    <div class="hud-frame">
+      <aside class="left-column panel">
+        <h2>الوحدات أون ديوتي</h2>
+        <div class="mini-card"><span>الرتبة</span><strong id="rankLabel">-</strong></div>
+        <div class="mini-card"><span>الحالة</span><select id="myStatus"></select></div>
+        <div id="unitsList" class="feed"></div>
+      </aside>
+
+      <section class="center-column panel">
+        <header class="center-header">
+          <h1 id="projectTitle">qb-smartdispatch</h1>
+          <button id="closeBtn" class="ghost">إغلاق ✕</button>
+        </header>
+
+        <div class="map-wrap">
+          <div class="grid-overlay"></div>
+          <div id="pins" class="pins"></div>
         </div>
-        <button id="closeBtn">✕</button>
-      </header>
 
-      <nav>
-        <button data-view="overview" class="tab active">Overview</button>
-        <button data-view="cases" class="tab">Cases</button>
-        <button data-view="operations" class="tab">Ops</button>
-      </nav>
+        <div class="command-bar">
+          <button id="newIncidentBtn">بلاغ جديد</button>
+          <button id="panicBtn">PANIC TEST</button>
+          <button id="emergencyBtn">حالة طوارئ المدينة</button>
+        </div>
 
-      <main>
-        <section id="overview" class="view active">
-          <div class="grid two">
-            <article class="panel metric"><h3>Active Cases</h3><strong id="metricCases">0</strong></article>
-            <article class="panel metric"><h3>Undercover Agents</h3><strong id="metricUndercover">0</strong></article>
-          </div>
-          <article class="panel">
-            <h3>Threat Files (NPC)</h3>
-            <div id="npcFiles" class="cards"></div>
-          </article>
-        </section>
-
-        <section id="cases" class="view">
-          <article class="panel">
-            <h3>Create Classified Case</h3>
-            <form id="caseForm" class="grid two">
-              <input name="title" placeholder="Case title" required />
-              <input name="summary" placeholder="Short summary" required />
-              <input name="suspects" placeholder="Suspects (comma separated)" />
-              <input name="plates" placeholder="Plates (comma separated)" />
-              <input name="weapons" placeholder="Weapons (comma separated)" />
-              <input name="linkedVehicles" placeholder="Vehicle models" />
-              <textarea name="notes" placeholder="Classified notes"></textarea>
-              <input name="media" placeholder="Media URLs / camera captures" />
-              <button type="submit">Submit Case</button>
-            </form>
-          </article>
-
-          <article class="panel">
-            <h3>Case Board</h3>
-            <div id="caseList" class="cards"></div>
-          </article>
-        </section>
-
-        <section id="operations" class="view">
-          <article class="panel">
-            <h3>Operations Console</h3>
-            <form id="opsForm" class="grid two">
-              <select name="caseId" id="opsCaseId" required></select>
-              <select name="operation">
-                <option value="phoneTrace">Phone Trace Request</option>
-                <option value="bugPlant">Plant Vehicle Bug</option>
-                <option value="raidStart">Start Raid Protocol</option>
+        <div class="forms-grid">
+          <article class="module">
+            <h3>لوحة البلاغات</h3>
+            <form id="incidentForm" class="stack">
+              <input name="type" placeholder="نوع البلاغ" required />
+              <input name="locationText" placeholder="الموقع" required />
+              <select name="priority">
+                <option>Low</option>
+                <option selected>Normal</option>
+                <option>High</option>
+                <option>Critical</option>
               </select>
-              <button type="submit">Launch / Request</button>
+              <textarea name="description" placeholder="وصف البلاغ"></textarea>
+            </form>
+            <div id="incidentsList" class="feed"></div>
+          </article>
+
+          <article class="module">
+            <h3>التوزيع الذكي</h3>
+            <form id="dispatchForm" class="stack">
+              <select id="dispatchIncident"></select>
+              <select name="mode" id="dispatchMode">
+                <option value="all">إرسال للجميع</option>
+                <option value="rank">إرسال لرتبة</option>
+                <option value="closest">إرسال لأقرب وحدة</option>
+                <option value="unit">إرسال لوحدة محددة</option>
+              </select>
+              <input name="rank" placeholder="rank: officer/sergeant/chief" />
+              <input name="targetSource" placeholder="source id للوحدة" />
+              <button type="submit">تنفيذ التوزيع</button>
+            </form>
+
+            <h3 style="margin-top:8px">الكاميرات</h3>
+            <form id="cameraForm" class="stack">
+              <select id="cameraSelect"></select>
+              <select id="cameraIncident"></select>
+              <button type="button" id="openCameraBtn">عرض الكاميرا</button>
+              <button type="button" id="linkCameraBtn">ربط الكاميرا ببلاغ</button>
             </form>
           </article>
-          <article class="panel">
-            <h3>Raid Progress Control</h3>
-            <div class="grid two">
-              <select id="raidCaseId"></select>
-              <button id="advanceRaid">Advance Stage</button>
-            </div>
+
+          <article class="module">
+            <h3>أرشفة / بحث</h3>
+            <form id="historyForm" class="stack">
+              <input name="dateFrom" placeholder="من تاريخ (YYYY-MM-DD)" />
+              <input name="dateTo" placeholder="إلى تاريخ (YYYY-MM-DD)" />
+              <input name="officer" placeholder="اسم الشرطي" />
+              <input name="crimeType" placeholder="نوع الجريمة" />
+              <button type="submit">بحث</button>
+            </form>
+            <div id="historyList" class="feed"></div>
           </article>
-        </section>
-      </main>
+
+          <article class="module">
+            <h3>إحصائيات / Heatmap</h3>
+            <div class="mini-card"><span>البلاغات النشطة</span><strong id="activeIncidents">0</strong></div>
+            <div class="mini-card"><span>الوحدات أون ديوتي</span><strong id="activeUnits">0</strong></div>
+            <div class="mini-card"><span>حالة المدينة</span><strong id="cityState">NORMAL</strong></div>
+            <div id="heatmapList" class="feed"></div>
+          </article>
+        </div>
+      </section>
+
+      <aside class="right-column panel">
+        <h2>التنبيهات المباشرة</h2>
+        <div id="alertsFeed" class="feed"></div>
+      </aside>
     </div>
   </div>
   <script src="js/app.js"></script>

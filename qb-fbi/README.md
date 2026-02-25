@@ -1,36 +1,34 @@
-# qb-fbi
+# qb-smartdispatch | Tactical Command System
 
-Advanced FBI roleplay job for QBCore + qb-target.
+نظام غرفة عمليات تكتيكي للشرطة على QBCore.
 
-## Features
-- Secret identity toggle: `/fbi undercover`.
-- FBI-only classified case management (NUI).
-- Surveillance requests: phone tracing and vehicle bugging with cooldowns.
-- Multi-stage cinematic raid flow with command approval stage control.
-- Specialized internal roles:
-  - Intelligence Analyst
-  - Field Agent
-  - HRT Operator
-  - Regional Lead
-- Federal-level NPC threat files for live events.
-- Agent count balance cap, operation logs, and restricted access gates.
+## الفكرة
+- فتح غرفة العمليات عبر `qb-target` من كمبيوتر مركز الشرطة.
+- الوصول فقط لشرطة **On Duty**.
+- واجهة NUI كاملة الشاشة بنمط Command Center.
 
-## Dependencies
+## الأنظمة
+- Live Map + تتبع الوحدات + حالة كل وحدة (Available / Busy / Pursuit / Emergency).
+- إدارة البلاغات: إنشاء/استلام/إغلاق مع Incident ID تلقائي.
+- توزيع ذكي: للجميع / رتبة محددة / أقرب وحدة / وحدة معينة.
+- كاميرات المدينة: عرض + Zoom/Rotate + ربط الكاميرا ببلاغ.
+- Panic Button: إنذار أحمر + موقع تلقائي + أولوية قصوى.
+- GPS Telemetry: سرعة الوحدات + خط مطاردة عند السرعة العالية.
+- تنبيهات تلقائية: إطلاق نار / حادث قوي / منطقة حساسة.
+- أرشفة MySQL: وقت الاستجابة، المستلم، المغلق، مدة المعالجة.
+- بحث تاريخي: تاريخ/اسم شرطي/نوع جريمة.
+- Heatmap لأكثر مناطق الجريمة + وضع طوارئ المدينة (Chief).
+
+## الصلاحيات
+- **Officer**: مشاهدة + استلام البلاغ.
+- **Sergeant**: توزيع + إغلاق + كاميرات.
+- **Chief**: كامل التحكم + وضع طوارئ المدينة.
+
+## الأوامر
+- `/smartdispatch` فتح النظام.
+- `/panic` زر Panic Button.
+
+## المتطلبات
 - `qb-core`
 - `qb-target`
 - `oxmysql`
-
-## Installation
-1. Put the folder in your resources directory.
-2. Ensure dependency order in `server.cfg`:
-   ```cfg
-   ensure qb-core
-   ensure qb-target
-   ensure qb-fbi
-   ```
-3. Add FBI job in your QBCore jobs table with 4 grades (0-3).
-4. Restart server.
-
-## Notes
-- Cases are persisted to `server/cases.json` in the resource.
-- This package is a production-ready foundation and can be expanded with real MDT, camera feeds, and judge integrations.

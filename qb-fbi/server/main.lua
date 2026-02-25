@@ -1,259 +1,473 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 
-local activeCases = {}
-local operationsCooldown = {}
-local undercoverAgents = {}
+local liveUnits = {}
+local activeIncidents = {}
+local incidentCounter = 0
+local cityEmergency = false
+local heatmap = {}
 
-local function countUndercoverAgents()
-    local count = 0
-    for _ in pairs(undercoverAgents) do
-        count = count + 1
-    end
-    return count
+local function getRole(player)
+    local grade = player.PlayerData.job.grade and player.PlayerData.job.grade.level or 0
+    return Config.Ranks[grade] or 'officer'
 end
 
-local function getRoleKey(player)
-    return Config.Grades[player.PlayerData.job.grade.level] or 'analyst'
+local function getPerms(player)
+    return Config.Permissions[getRole(player)] or Config.Permissions.officer
 end
 
-local function hasPermission(player, key)
-    if not player or player.PlayerData.job.name ~= Config.JobName then
-        return false
-    end
+local function isPoliceOnDuty(player)
+    if not player then return false end
+    local job = player.PlayerData.job
+    return job and job.name == Config.JobName and job.onduty == true
+end
 
-    local roleKey = getRoleKey(player)
-    local perms = Config.Permissions[roleKey] or {}
+local function hasPerm(player, key)
+    local perms = getPerms(player)
     return perms[key] == true
 end
 
-local function isLimitReached()
-    local count = 0
-    local players = QBCore.Functions.GetQBPlayers()
-    for _, player in pairs(players) do
-        if player.PlayerData.job.name == Config.JobName then
-            count = count + 1
-        end
-    end
-    return count > Config.MaxAgents
-end
-
-local function serializeCases()
-    local arr = {}
-    for _, caseData in pairs(activeCases) do
-        arr[#arr + 1] = caseData
-    end
-    table.sort(arr, function(a, b) return a.createdAt > b.createdAt end)
-    return arr
-end
-
-local function saveCases()
-    SaveResourceFile(GetCurrentResourceName(), 'server/cases.json', json.encode(activeCases, { indent = true }), -1)
-end
-
-local function loadCases()
-    local raw = LoadResourceFile(GetCurrentResourceName(), 'server/cases.json')
-    if not raw or raw == '' then return end
-
-    local decoded = json.decode(raw)
-    if type(decoded) == 'table' then
-        activeCases = decoded
-    end
-end
-
-local function broadcastDashboard()
-    local payload = {
-        cases = serializeCases(),
-        npcFiles = Config.NpcFiles,
-        undercoverCount = countUndercoverAgents()
+local function unitData(player)
+    return {
+        source = player.PlayerData.source,
+        citizenid = player.PlayerData.citizenid,
+        name = (player.PlayerData.charinfo.firstname or '') .. ' ' .. (player.PlayerData.charinfo.lastname or ''),
+        rank = getRole(player),
+        rankLabel = Config.RankLabels[getRole(player)] or getRole(player),
+        status = 'Available',
+        speed = 0,
+        coords = { x = 0.0, y = 0.0, z = 0.0 },
+        panic = false,
+        signalLost = false,
+        updatedAt = os.time(),
+        pursuitPath = {}
     }
+end
 
-    for _, player in pairs(QBCore.Functions.GetQBPlayers()) do
-        if player.PlayerData.job.name == Config.JobName then
-            TriggerClientEvent('qb-fbi:client:syncDashboard', player.PlayerData.source, payload)
+local function nextIncidentId()
+    incidentCounter = incidentCounter + 1
+    return ('INC-%05d'):format(incidentCounter)
+end
+
+local function addHeat(coords)
+    local key = ('%d:%d'):format(math.floor(coords.x / 100), math.floor(coords.y / 100))
+    heatmap[key] = (heatmap[key] or 0) + 1
+end
+
+local function refreshUnitsFromDuty()
+    for _, id in pairs(QBCore.Functions.GetPlayers()) do
+        local p = QBCore.Functions.GetPlayer(id)
+        if p and isPoliceOnDuty(p) then
+            if not liveUnits[id] then
+                liveUnits[id] = unitData(p)
+            end
+        else
+            liveUnits[id] = nil
         end
     end
 end
 
-AddEventHandler('onResourceStart', function(resource)
-    if resource ~= GetCurrentResourceName() then return end
-    loadCases()
-end)
+local function toList(map)
+    local list = {}
+    for _, v in pairs(map) do
+        list[#list + 1] = v
+    end
+    table.sort(list, function(a, b)
+        return (a.createdAt or 0) > (b.createdAt or 0)
+    end)
+    return list
+end
 
-QBCore.Functions.CreateCallback('qb-fbi:server:getDashboardData', function(source, cb)
-    local player = QBCore.Functions.GetPlayer(source)
-    if not player or player.PlayerData.job.name ~= Config.JobName then
-        cb({ cases = {}, npcFiles = {}, denied = true })
-        return
+local function incidentHistoryQuery(filter)
+    filter = filter or {}
+    local clauses = { '1=1' }
+    local params = {}
+
+    if filter.dateFrom and filter.dateFrom ~= '' then
+        clauses[#clauses + 1] = 'created_at >= ?'
+        params[#params + 1] = filter.dateFrom
+    end
+    if filter.dateTo and filter.dateTo ~= '' then
+        clauses[#clauses + 1] = 'created_at <= ?'
+        params[#params + 1] = filter.dateTo
+    end
+    if filter.officer and filter.officer ~= '' then
+        clauses[#clauses + 1] = '(claimed_by_name LIKE ? OR closed_by_name LIKE ?)'
+        params[#params + 1] = ('%%%s%%'):format(filter.officer)
+        params[#params + 1] = ('%%%s%%'):format(filter.officer)
+    end
+    if filter.crimeType and filter.crimeType ~= '' then
+        clauses[#clauses + 1] = 'type LIKE ?'
+        params[#params + 1] = ('%%%s%%'):format(filter.crimeType)
     end
 
-    cb({
-        cases = serializeCases(),
-        npcFiles = Config.NpcFiles,
-        undercoverCount = countUndercoverAgents(),
-        role = getRoleKey(player),
-        rolePermissions = Config.Permissions[getRoleKey(player)]
+    local sql = ([[
+        SELECT incident_id, type, location_text, priority, created_at, closed_at, claimed_by_name, closed_by_name, response_seconds, handle_seconds
+        FROM smartdispatch_incident_history
+        WHERE %s
+        ORDER BY id DESC
+        LIMIT 200
+    ]]):format(table.concat(clauses, ' AND '))
+
+    return MySQL.query.await(sql, params) or {}
+end
+
+local function payloadFor(player)
+    refreshUnitsFromDuty()
+    local role = getRole(player)
+
+    local cams = {}
+    for _, cam in ipairs(Config.Cameras) do
+        if role == 'chief' or cam.minRank == 'officer' or (cam.minRank == 'sergeant' and (role == 'sergeant' or role == 'chief')) then
+            cams[#cams + 1] = cam
+        end
+    end
+
+    return {
+        projectName = Config.ProjectName,
+        rank = role,
+        rankLabel = Config.RankLabels[role] or role,
+        permissions = getPerms(player),
+        unitStatuses = Config.UnitStatuses,
+        incidents = toList(activeIncidents),
+        units = toList(liveUnits),
+        cameras = cams,
+        cityEmergency = cityEmergency,
+        heatmap = heatmap,
+        stats = {
+            totalIncidents = #toList(activeIncidents),
+            onDutyUnits = #toList(liveUnits)
+        }
+    }
+end
+
+local function broadcastDispatch()
+    refreshUnitsFromDuty()
+    for src, _ in pairs(liveUnits) do
+        local p = QBCore.Functions.GetPlayer(src)
+        if p then
+            TriggerClientEvent('qb-fbi:client:syncDispatchData', src, payloadFor(p))
+        end
+    end
+end
+
+local function notify(src, msg, t)
+    TriggerClientEvent('qb-fbi:client:notify', src, msg, t or 'primary')
+end
+
+local function persistCreate(inc)
+    MySQL.insert.await([[
+        INSERT INTO smartdispatch_incident_history
+        (incident_id, type, location_text, location_x, location_y, location_z, priority, created_by_source, created_by_name, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    ]], {
+        inc.id,
+        inc.type,
+        inc.locationText,
+        inc.coords.x,
+        inc.coords.y,
+        inc.coords.z,
+        inc.priority,
+        inc.createdBySource,
+        inc.createdByName
     })
+end
+
+local function persistClaim(inc)
+    MySQL.update.await([[
+        UPDATE smartdispatch_incident_history
+        SET claimed_by_source = ?, claimed_by_name = ?, claimed_at = NOW(), response_seconds = TIMESTAMPDIFF(SECOND, created_at, NOW())
+        WHERE incident_id = ?
+    ]], {
+        inc.claimedBySource,
+        inc.claimedByName,
+        inc.id
+    })
+end
+
+local function persistClose(inc)
+    MySQL.update.await([[
+        UPDATE smartdispatch_incident_history
+        SET closed_by_source = ?, closed_by_name = ?, closed_at = NOW(), handle_seconds = TIMESTAMPDIFF(SECOND, created_at, NOW())
+        WHERE incident_id = ?
+    ]], {
+        inc.closedBySource,
+        inc.closedByName,
+        inc.id
+    })
+end
+
+CreateThread(function()
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS smartdispatch_incident_history (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            incident_id VARCHAR(32) UNIQUE,
+            type VARCHAR(64),
+            location_text VARCHAR(128),
+            location_x DOUBLE,
+            location_y DOUBLE,
+            location_z DOUBLE,
+            priority VARCHAR(32),
+            created_by_source INT,
+            created_by_name VARCHAR(128),
+            claimed_by_source INT NULL,
+            claimed_by_name VARCHAR(128) NULL,
+            closed_by_source INT NULL,
+            closed_by_name VARCHAR(128) NULL,
+            created_at DATETIME,
+            claimed_at DATETIME NULL,
+            closed_at DATETIME NULL,
+            response_seconds INT DEFAULT 0,
+            handle_seconds INT DEFAULT 0
+        )
+    ]])
+
+    local row = MySQL.single.await('SELECT MAX(id) AS max_id FROM smartdispatch_incident_history')
+    incidentCounter = row and row.max_id or 0
 end)
 
-RegisterNetEvent('qb-fbi:server:setUndercover', function(state)
-    local src = source
-    local player = QBCore.Functions.GetPlayer(src)
-    if not player or player.PlayerData.job.name ~= Config.JobName then
+QBCore.Functions.CreateCallback('qb-fbi:server:getDispatchData', function(source, cb)
+    local player = QBCore.Functions.GetPlayer(source)
+    if not isPoliceOnDuty(player) then
+        cb({ error = 'not_allowed' })
         return
     end
-
-    if state then
-        undercoverAgents[src] = {
-            fakeJob = Config.CivilianIdentities[math.random(1, #Config.CivilianIdentities)],
-            fakeName = ('%s %s'):format(player.PlayerData.charinfo.firstname, player.PlayerData.charinfo.lastname)
-        }
-        Player(src).state:set('fbiAliasName', undercoverAgents[src].fakeName, true)
-        Player(src).state:set('fbiAliasJob', undercoverAgents[src].fakeJob, true)
-    else
-        undercoverAgents[src] = nil
-        Player(src).state:set('fbiAliasName', nil, true)
-        Player(src).state:set('fbiAliasJob', nil, true)
-    end
-
-    Player(src).state:set('fbiUndercover', state, true)
-    broadcastDashboard()
+    cb(payloadFor(player))
 end)
 
-RegisterNetEvent('qb-fbi:server:createCase', function(data)
-    local src = source
-    local player = QBCore.Functions.GetPlayer(src)
-
-    if not player or not hasPermission(player, 'canCreateCase') then
-        TriggerClientEvent('qb-fbi:client:notify', src, 'Access denied.', 'error')
+QBCore.Functions.CreateCallback('qb-fbi:server:getHistory', function(source, cb, filter)
+    local player = QBCore.Functions.GetPlayer(source)
+    if not isPoliceOnDuty(player) then
+        cb({})
         return
     end
+    cb(incidentHistoryQuery(filter))
+end)
 
-    local caseId = ('CASE-%s'):format(math.random(100000, 999999))
-    activeCases[caseId] = {
-        id = caseId,
-        title = data.title or 'Untitled Case',
-        summary = data.summary or '',
-        suspects = data.suspects or {},
-        plates = data.plates or {},
-        weapons = data.weapons or {},
-        linkedVehicles = data.linkedVehicles or {},
-        notes = data.notes or '',
-        media = data.media or {},
-        status = 'Active Intelligence',
-        raidStage = 0,
-        createdBy = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname,
+RegisterNetEvent('qb-fbi:server:updateTelemetry', function(data)
+    local src = source
+    local player = QBCore.Functions.GetPlayer(src)
+    if not isPoliceOnDuty(player) then return end
+
+    if not liveUnits[src] then
+        liveUnits[src] = unitData(player)
+    end
+
+    local u = liveUnits[src]
+    u.status = data.status or u.status
+    u.speed = tonumber(data.speed) or 0
+    u.coords = data.coords or u.coords
+    u.panic = data.panic == true
+    u.signalLost = data.signalLost == true
+    u.updatedAt = os.time()
+
+    if data.pursuitPoint then
+        u.pursuitPath[#u.pursuitPath + 1] = data.pursuitPoint
+        if #u.pursuitPath > 15 then
+            table.remove(u.pursuitPath, 1)
+        end
+    end
+
+    if data.signalLost == true then
+        notify(src, 'تحذير: فقدان إشارة الوحدة.', 'error')
+    end
+
+    broadcastDispatch()
+end)
+
+RegisterNetEvent('qb-fbi:server:createIncident', function(data)
+    local src = source
+    local player = QBCore.Functions.GetPlayer(src)
+    if not isPoliceOnDuty(player) then return end
+
+    local ped = GetPlayerPed(src)
+    local c = GetEntityCoords(ped)
+    local coords = data.coords or { x = c.x, y = c.y, z = c.z }
+
+    local inc = {
+        id = nextIncidentId(),
+        type = data.type or 'General',
+        locationText = data.locationText or ('X: %.1f | Y: %.1f'):format(coords.x, coords.y),
+        coords = coords,
+        priority = data.priority or 'Normal',
+        description = data.description or '',
         createdAt = os.time(),
-        logs = {
-            {
-                text = 'Case initialized and marked as classified.',
-                by = src,
-                at = os.time()
-            }
-        }
+        createdBySource = src,
+        createdByName = (player.PlayerData.charinfo.firstname or '') .. ' ' .. (player.PlayerData.charinfo.lastname or ''),
+        status = 'Open',
+        assignedUnit = nil,
+        closedBySource = nil
     }
 
-    saveCases()
-    broadcastDashboard()
-    TriggerClientEvent('qb-fbi:client:notify', src, ('Case %s created.'):format(caseId), 'success')
-end)
-
-RegisterNetEvent('qb-fbi:server:startOperation', function(data)
-    local src = source
-    local player = QBCore.Functions.GetPlayer(src)
-    if not player then return end
-
-    local opType = data.operation
-    local targetCase = data.caseId
-    local caseData = activeCases[targetCase]
-
-    if not caseData then
-        TriggerClientEvent('qb-fbi:client:notify', src, 'Case not found.', 'error')
-        return
+    if data.isPanic then
+        inc.priority = 'Critical'
+        inc.type = 'PANIC BUTTON'
     end
 
-    if not hasPermission(player, 'canStartRaid') then
-        TriggerClientEvent('qb-fbi:client:notify', src, 'You are not allowed to launch operations.', 'error')
-        return
-    end
+    activeIncidents[inc.id] = inc
+    addHeat(coords)
+    persistCreate(inc)
 
-    local now = os.time()
-    operationsCooldown[src] = operationsCooldown[src] or {}
+    broadcastDispatch()
 
-    if operationsCooldown[src][opType] and operationsCooldown[src][opType] > now then
-        local left = operationsCooldown[src][opType] - now
-        TriggerClientEvent('qb-fbi:client:notify', src, ('Cooldown active: %s seconds left.'):format(left), 'error')
-        return
-    end
-
-    if opType == 'phoneTrace' or opType == 'bugPlant' then
-        if not hasPermission(player, 'canRequestTap') then
-            TriggerClientEvent('qb-fbi:client:notify', src, 'Insufficient clearance for surveillance tools.', 'error')
-            return
-        end
-
-        caseData.logs[#caseData.logs + 1] = {
-            text = ('%s request submitted; pending lead authorization.'):format(opType),
-            by = src,
-            at = now
-        }
-
-        operationsCooldown[src][opType] = now + (Config.Cooldowns[opType] or 300)
-        saveCases()
-        broadcastDashboard()
-        TriggerClientEvent('qb-fbi:client:notify', src, 'Request submitted. Regional lead approval required.', 'primary')
-        return
-    end
-
-    if opType == 'raidStart' then
-        if isLimitReached() then
-            TriggerClientEvent('qb-fbi:client:notify', src, 'FBI active unit cap reached, command review needed.', 'error')
-            return
-        end
-
-        caseData.status = 'Raid Protocol Active'
-        caseData.raidStage = 1
-        caseData.logs[#caseData.logs + 1] = {
-            text = 'Raid protocol initiated, waiting for judicial authorization.',
-            by = src,
-            at = now
-        }
-        operationsCooldown[src][opType] = now + Config.Cooldowns.raidStart
-        saveCases()
-        broadcastDashboard()
-        TriggerClientEvent('qb-fbi:client:notify', src, 'Raid stage 1 started.', 'success')
+    if data.isPanic then
+        TriggerClientEvent('qb-fbi:client:panicAlarm', -1, inc)
     end
 end)
 
-RegisterNetEvent('qb-fbi:server:advanceRaid', function(caseId)
+RegisterNetEvent('qb-fbi:server:claimIncident', function(incidentId)
     local src = source
     local player = QBCore.Functions.GetPlayer(src)
-    local caseData = activeCases[caseId]
+    if not isPoliceOnDuty(player) or not hasPerm(player, 'canClaimIncident') then return end
 
-    if not player or not caseData then return end
-    if not hasPermission(player, 'canApproveRaid') then
-        TriggerClientEvent('qb-fbi:client:notify', src, 'Only regional lead can advance raid stages.', 'error')
-        return
+    local inc = activeIncidents[incidentId]
+    if not inc then return end
+
+    inc.assignedUnit = src
+    inc.claimedBySource = src
+    inc.claimedByName = (player.PlayerData.charinfo.firstname or '') .. ' ' .. (player.PlayerData.charinfo.lastname or '')
+    inc.status = 'In Progress'
+    persistClaim(inc)
+    broadcastDispatch()
+end)
+
+RegisterNetEvent('qb-fbi:server:closeIncident', function(incidentId)
+    local src = source
+    local player = QBCore.Functions.GetPlayer(src)
+    if not isPoliceOnDuty(player) or not hasPerm(player, 'canCloseIncident') then return end
+
+    local inc = activeIncidents[incidentId]
+    if not inc then return end
+
+    inc.status = 'Closed'
+    inc.closedBySource = src
+    inc.closedByName = (player.PlayerData.charinfo.firstname or '') .. ' ' .. (player.PlayerData.charinfo.lastname or '')
+    persistClose(inc)
+    activeIncidents[incidentId] = nil
+    broadcastDispatch()
+end)
+
+RegisterNetEvent('qb-fbi:server:dispatchIncident', function(data)
+    local src = source
+    local player = QBCore.Functions.GetPlayer(src)
+    if not isPoliceOnDuty(player) or not hasPerm(player, 'canDispatch') then return end
+
+    local inc = activeIncidents[data.incidentId]
+    if not inc then return end
+
+    if data.mode == 'all' then
+        TriggerClientEvent('qb-fbi:client:dispatchMessage', -1, ('Dispatch: %s -> %s'):format(inc.id, inc.type), inc.coords)
+    elseif data.mode == 'rank' then
+        for unitSrc, u in pairs(liveUnits) do
+            if u.rank == data.rank then
+                TriggerClientEvent('qb-fbi:client:dispatchMessage', unitSrc, ('Dispatch (%s): %s'):format(data.rank, inc.id), inc.coords)
+            end
+        end
+    elseif data.mode == 'closest' then
+        local bestSrc, bestDist = nil, 999999.0
+        for unitSrc, u in pairs(liveUnits) do
+            local dx = (u.coords.x or 0.0) - inc.coords.x
+            local dy = (u.coords.y or 0.0) - inc.coords.y
+            local dist = (dx * dx + dy * dy)
+            if dist < bestDist then
+                bestDist = dist
+                bestSrc = unitSrc
+            end
+        end
+
+        if bestSrc then
+            TriggerClientEvent('qb-fbi:client:dispatchMessage', bestSrc, ('Dispatch Closest Unit: %s'):format(inc.id), inc.coords)
+            inc.assignedUnit = bestSrc
+        end
+    elseif data.mode == 'unit' and data.targetSource then
+        TriggerClientEvent('qb-fbi:client:dispatchMessage', tonumber(data.targetSource), ('Dispatch Direct: %s'):format(inc.id), inc.coords)
+        inc.assignedUnit = tonumber(data.targetSource)
     end
 
-    local nextStage = caseData.raidStage + 1
-    if nextStage > #Config.RaidStages then
-        caseData.status = 'Completed / Archived'
-        caseData.logs[#caseData.logs + 1] = {
-            text = 'Operation fully completed and archived.',
-            by = src,
-            at = os.time()
-        }
+    broadcastDispatch()
+end)
+
+RegisterNetEvent('qb-fbi:server:linkCamera', function(data)
+    local src = source
+    local player = QBCore.Functions.GetPlayer(src)
+    if not isPoliceOnDuty(player) or not hasPerm(player, 'canViewCameras') then return end
+
+    local inc = activeIncidents[data.incidentId]
+    if not inc then return end
+
+    inc.linkedCamera = data.cameraId
+    broadcastDispatch()
+end)
+
+RegisterNetEvent('qb-fbi:server:setCityEmergency', function(state)
+    local src = source
+    local player = QBCore.Functions.GetPlayer(src)
+    if not isPoliceOnDuty(player) or not hasPerm(player, 'canCityEmergency') then return end
+
+    cityEmergency = state == true
+    if cityEmergency then
+        TriggerClientEvent('qb-fbi:client:dispatchMessage', -1, '⚠ حالة طوارئ المدينة مفعلة', nil)
     else
-        caseData.raidStage = nextStage
-        caseData.status = Config.RaidStages[nextStage]
-        caseData.logs[#caseData.logs + 1] = {
-            text = ('Raid advanced to stage: %s'):format(Config.RaidStages[nextStage]),
-            by = src,
-            at = os.time()
-        }
+        TriggerClientEvent('qb-fbi:client:dispatchMessage', -1, '✅ تم إلغاء حالة الطوارئ', nil)
     end
 
-    saveCases()
-    broadcastDashboard()
-    TriggerClientEvent('qb-fbi:client:notify', src, 'Raid stage updated.', 'success')
+    broadcastDispatch()
+end)
+
+RegisterNetEvent('qb-fbi:server:autoAlert', function(data)
+    local src = source
+    local player = QBCore.Functions.GetPlayer(src)
+    if not isPoliceOnDuty(player) then return end
+
+    local ped = GetPlayerPed(src)
+    local c = GetEntityCoords(ped)
+    local coords = data.coords or { x = c.x, y = c.y, z = c.z }
+
+    local inc = {
+        id = nextIncidentId(),
+        type = data.type or 'Auto Alert',
+        locationText = data.locationText or ('X: %.1f | Y: %.1f'):format(coords.x, coords.y),
+        coords = coords,
+        priority = data.priority or 'High',
+        description = data.description or 'System generated alert',
+        createdAt = os.time(),
+        createdBySource = src,
+        createdByName = (player.PlayerData.charinfo.firstname or '') .. ' ' .. (player.PlayerData.charinfo.lastname or ''),
+        status = 'Open',
+        assignedUnit = nil,
+        closedBySource = nil
+    }
+
+    if data.isPanic then
+        inc.priority = 'Critical'
+        inc.type = 'PANIC BUTTON'
+    end
+
+    activeIncidents[inc.id] = inc
+    addHeat(coords)
+    persistCreate(inc)
+    broadcastDispatch()
+
+    if data.isPanic then
+        TriggerClientEvent('qb-fbi:client:panicAlarm', -1, inc)
+    end
+end)
+
+AddEventHandler('playerDropped', function()
+    local src = source
+    liveUnits[src] = nil
+    broadcastDispatch()
+end)
+
+RegisterNetEvent('QBCore:Server:SetDuty', function(onDuty)
+    local src = source
+    local player = QBCore.Functions.GetPlayer(src)
+    if not player or player.PlayerData.job.name ~= Config.JobName then return end
+
+    if onDuty then
+        liveUnits[src] = unitData(player)
+    else
+        liveUnits[src] = nil
+    end
+
+    broadcastDispatch()
 end)

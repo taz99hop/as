@@ -1,119 +1,80 @@
 Config = {}
 
-Config.JobName = 'fbi'
-Config.MaxAgents = 8
-Config.UndercoverCooldown = 300 -- seconds
+Config.ProjectName = 'qb-smartdispatch | Tactical Command System'
+Config.JobName = 'police'
+Config.CommandName = 'smartdispatch'
+
+Config.DispatchCenter = {
+    coords = vector3(441.2, -981.9, 30.7),
+    size = vector3(1.2, 1.0, 2.0),
+    heading = 90.0,
+    icon = 'fas fa-headset',
+    label = 'فتح غرفة العمليات'
+}
+
+Config.Ranks = {
+    [0] = 'officer',
+    [1] = 'officer',
+    [2] = 'sergeant',
+    [3] = 'sergeant',
+    [4] = 'chief'
+}
+
+Config.RankLabels = {
+    officer = 'Officer',
+    sergeant = 'Sergeant',
+    chief = 'Chief'
+}
 
 Config.Permissions = {
-    analyst = {
-        canCreateCase = true,
-        canViewAllCases = true,
-        canRequestTap = false,
-        canApproveTap = false,
-        canStartRaid = false,
-        canApproveRaid = false,
-        canManageAgents = false
+    officer = {
+        canViewIncidents = true,
+        canClaimIncident = true,
+        canCloseIncident = false,
+        canDispatch = false,
+        canViewCameras = false,
+        canManageSettings = false,
+        canCityEmergency = false
     },
-    field_agent = {
-        canCreateCase = true,
-        canViewAllCases = true,
-        canRequestTap = true,
-        canApproveTap = false,
-        canStartRaid = true,
-        canApproveRaid = false,
-        canManageAgents = false
+    sergeant = {
+        canViewIncidents = true,
+        canClaimIncident = true,
+        canCloseIncident = true,
+        canDispatch = true,
+        canViewCameras = true,
+        canManageSettings = false,
+        canCityEmergency = false
     },
-    hrt = {
-        canCreateCase = true,
-        canViewAllCases = true,
-        canRequestTap = true,
-        canApproveTap = false,
-        canStartRaid = true,
-        canApproveRaid = false,
-        canManageAgents = false
-    },
-    regional_lead = {
-        canCreateCase = true,
-        canViewAllCases = true,
-        canRequestTap = true,
-        canApproveTap = true,
-        canStartRaid = true,
-        canApproveRaid = true,
-        canManageAgents = true
+    chief = {
+        canViewIncidents = true,
+        canClaimIncident = true,
+        canCloseIncident = true,
+        canDispatch = true,
+        canViewCameras = true,
+        canManageSettings = true,
+        canCityEmergency = true
     }
 }
 
-Config.Grades = {
-    [0] = 'analyst',
-    [1] = 'field_agent',
-    [2] = 'hrt',
-    [3] = 'regional_lead'
+Config.UnitStatuses = {
+    'Available',
+    'Busy',
+    'Pursuit',
+    'Emergency'
 }
 
-Config.TargetZones = {
-    command_terminal = {
-        coords = vector3(136.58, -764.76, 45.75),
-        size = vector3(1.2, 0.8, 1.8),
-        heading = 340.0,
-        icon = 'fas fa-laptop-code',
-        label = 'FBI Intelligence Terminal'
-    },
-    evidence_board = {
-        coords = vector3(140.15, -762.92, 45.75),
-        size = vector3(1.8, 0.8, 1.8),
-        heading = 340.0,
-        icon = 'fas fa-diagram-project',
-        label = 'FBI Case Board'
-    }
+Config.Cameras = {
+    { id = 'CAM-001', label = 'Mission Row Gate', pos = vector3(449.37, -997.04, 36.0), lookAt = vector3(438.7, -991.8, 30.8), minRank = 'sergeant' },
+    { id = 'CAM-002', label = 'Vespucci Blvd', pos = vector3(307.1, -579.4, 59.0), lookAt = vector3(326.9, -574.8, 28.8), minRank = 'sergeant' },
+    { id = 'CAM-003', label = 'Downtown Bridge', pos = vector3(2518.6, -415.7, 101.2), lookAt = vector3(2486.4, -406.0, 93.0), minRank = 'chief' }
 }
 
-Config.RaidStages = {
-    'Evidence Ready',
-    'Judicial Authorization',
-    'Team Assembly',
-    'Entry & Breach',
-    'After Action Report'
+Config.AutoAlerts = {
+    gunshotCooldown = 45,
+    collisionCooldown = 60,
+    wantedZoneCooldown = 60,
+    wantedZone = { center = vector3(250.0, -1050.0, 29.0), radius = 130.0 }
 }
 
-Config.Cooldowns = {
-    phoneTrace = 900,
-    bugPlant = 600,
-    raidStart = 1200
-}
-
-Config.RequiredApprovals = {
-    phoneTrace = 'canApproveTap',
-    bugPlant = 'canApproveTap',
-    raidStart = 'canApproveRaid'
-}
-
-Config.NpcFiles = {
-    { id = 'org-redwire', title = 'Redwire Cartel', threat = 'High', note = 'Synthetic weapon trafficking ring.' },
-    { id = 'cell-blackreef', title = 'Blackreef Cell', threat = 'Critical', note = 'Potential terror financing and explosives.' },
-    { id = 'smug-ironline', title = 'Ironline Smuggling', threat = 'Medium', note = 'Cross-border firearm route in port districts.' }
-}
-
-Config.CivilianIdentities = {
-    'IT Consultant',
-    'Insurance Investigator',
-    'Freelance Journalist',
-    'Logistics Auditor',
-    'Security Analyst'
-}
-
-Config.Outfits = {
-    male = {
-        tshirt_1 = 31, tshirt_2 = 0,
-        torso_1 = 4, torso_2 = 0,
-        arms = 4,
-        pants_1 = 24, pants_2 = 0,
-        shoes_1 = 21, shoes_2 = 0
-    },
-    female = {
-        tshirt_1 = 14, tshirt_2 = 0,
-        torso_1 = 361, torso_2 = 0,
-        arms = 4,
-        pants_1 = 25, pants_2 = 0,
-        shoes_1 = 21, shoes_2 = 0
-    }
-}
+Config.TelemetryTickMs = 2500
+Config.PanicSoundFile = 'alarm.ogg'
