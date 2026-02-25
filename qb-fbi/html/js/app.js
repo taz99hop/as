@@ -1,10 +1,12 @@
 const app = document.getElementById('app');
-const views = document.querySelectorAll('.view');
-const tabs = document.querySelectorAll('.tab');
 
 const state = {
+  permissions: {},
+  quickActions: [],
   cases: [],
-  npcFiles: []
+  incidents: [],
+  reports: [],
+  rankLabel: '-'
 };
 
 const post = (event, data = {}) => {
@@ -15,91 +17,174 @@ const post = (event, data = {}) => {
   });
 };
 
-const parseList = (value) => (value || '').split(',').map(v => v.trim()).filter(Boolean);
+const parseList = (raw) => (raw || '').split(',').map(v => v.trim()).filter(Boolean);
 
-function setView(name) {
-  views.forEach(v => v.classList.toggle('active', v.id === name));
-  tabs.forEach(t => t.classList.toggle('active', t.dataset.view === name));
-}
+const setPermissionState = () => {
+  const map = [
+    ['interrogationForm', 'canUseInterrogation'],
+    ['patrolForm', 'canAssignPatrols'],
+    ['academyForm', 'canRunAcademy']
+  ];
 
-function render() {
-  document.getElementById('metricCases').textContent = state.cases.length;
-  document.getElementById('metricUndercover').textContent = state.undercoverCount || 0;
+  map.forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.closest('.module').style.display = state.permissions[key] ? 'block' : 'none';
+  });
+};
 
-  const caseList = document.getElementById('caseList');
-  caseList.innerHTML = state.cases.map(c => `
-    <div class="card">
-      <strong>${c.id} - ${c.title}</strong>
-      <div class="meta">${c.status || 'Active'} | by ${c.createdBy || 'Unknown'}</div>
-      <p>${c.summary || ''}</p>
-      <div class="log">${(c.logs || []).slice(-1)[0]?.text || 'No operation logs yet.'}</div>
-    </div>
-  `).join('');
+const renderPins = () => {
+  const pins = document.getElementById('incidentPins');
+  const items = state.incidents.slice(0, 12);
+  pins.innerHTML = items.map((_, index) => {
+    const x = 8 + ((index * 17) % 82);
+    const y = 12 + ((index * 11) % 72);
+    return `<span class="pin" style="left:${x}%;top:${y}%"></span>`;
+  }).join('');
+};
 
-  const npcFiles = document.getElementById('npcFiles');
-  npcFiles.innerHTML = (state.npcFiles || []).map(n => `
-    <div class="card">
-      <strong>${n.title}</strong>
-      <div class="meta">Threat: ${n.threat}</div>
-      <p>${n.note}</p>
-    </div>
-  `).join('');
+const renderFeed = () => {
+  const feed = document.getElementById('feed');
+  const entries = [
+    ...state.cases.slice(0, 3).map(c => `📁 ${c.id} - ${c.title}`),
+    ...state.incidents.slice(0, 4).map(i => `🚨 ${i.title} (${i.status})`),
+    ...state.reports.slice(0, 2).map(r => `🧾 ${r.id} - ${r.officer || ''}`)
+  ];
 
-  const caseOptions = state.cases.map(c => `<option value="${c.id}">${c.id} - ${c.title}</option>`).join('');
-  document.getElementById('opsCaseId').innerHTML = caseOptions;
-  document.getElementById('raidCaseId').innerHTML = caseOptions;
-}
+  feed.innerHTML = (entries.length ? entries : ['لا توجد بيانات حديثة']).map(item => `<div class="feed-item">${item}</div>`).join('');
+};
+
+const syncCaseSelectors = () => {
+  const opts = state.cases.map(c => `<option value="${c.id}">${c.id} - ${c.title}</option>`).join('');
+  document.querySelectorAll('.case-ref, #caseSelect').forEach(select => {
+    select.innerHTML = opts || '<option value="">لا توجد قضايا</option>';
+  });
+};
+
+const renderQuickActions = () => {
+  const wrapper = document.getElementById('quickActions');
+  wrapper.innerHTML = (state.quickActions || []).map(item => `<div class="quick">${item.icon} ${item.label}</div>`).join('');
+};
+
+const render = () => {
+  document.getElementById('rankLabel').textContent = state.rankLabel;
+  document.getElementById('caseCount').textContent = state.cases.length;
+  document.getElementById('incidentCount').textContent = state.incidents.length;
+  const stats = state.myStats || {};
+  const efficiency = Math.min(100, (stats.callsHandled || 0) * 5 + (stats.forensics || 0) * 4 + (stats.pursuits || 0) * 3);
+  document.getElementById('efficiency').textContent = `${efficiency}%`;
+
+  renderQuickActions();
+  renderPins();
+  renderFeed();
+  syncCaseSelectors();
+  setPermissionState();
+};
 
 window.addEventListener('message', (event) => {
-  const { action, payload, view, state: nuiState } = event.data;
+  const { action, payload, state: nuiState } = event.data;
 
   if (action === 'toggle') {
     app.classList.toggle('hidden', !nuiState);
   }
 
   if (action === 'hydrate') {
+    state.permissions = payload.permissions || {};
+    state.quickActions = payload.quickActions || [];
     state.cases = payload.cases || [];
-    state.npcFiles = payload.npcFiles || [];
-    state.undercoverCount = payload.undercoverCount || 0;
+    state.incidents = payload.incidents || [];
+    state.reports = payload.reports || [];
+    state.myStats = payload.myStats || {};
+    state.rankLabel = payload.rankLabel || '-';
     render();
-    if (view) setView(view);
   }
 });
 
-document.getElementById('closeBtn').addEventListener('click', () => post('close'));
+const dispatchSimpleAction = (action, extra = {}) => {
+  post('runAction', { action, ...extra });
+  setTimeout(() => {
+    fetch(`https://${GetParentResourceName()}/refresh`, { method: 'POST' })
+      .then(res => res.json())
+      .then(payload => {
+        state.permissions = payload.permissions || {};
+        state.quickActions = payload.quickActions || [];
+        state.cases = payload.cases || [];
+        state.incidents = payload.incidents || [];
+        state.reports = payload.reports || [];
+        state.myStats = payload.myStats || {};
+        state.rankLabel = payload.rankLabel || '-';
+        render();
+      });
+  }, 220);
+};
 
-tabs.forEach(tab => tab.addEventListener('click', () => setView(tab.dataset.view)));
+document.getElementById('closeBtn').addEventListener('click', () => post('close'));
+document.querySelectorAll('[data-action]').forEach(btn => {
+  btn.addEventListener('click', () => dispatchSimpleAction(btn.dataset.action));
+});
 
 document.getElementById('caseForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const form = new FormData(e.currentTarget);
   post('createCase', {
     title: form.get('title'),
+    type: form.get('type'),
     summary: form.get('summary'),
-    suspects: parseList(form.get('suspects')),
-    plates: parseList(form.get('plates')),
-    weapons: parseList(form.get('weapons')),
-    linkedVehicles: parseList(form.get('linkedVehicles')),
-    notes: form.get('notes'),
-    media: parseList(form.get('media'))
+    suspects: parseList(form.get('suspects'))
   });
   e.currentTarget.reset();
-  setTimeout(() => post('requestDataRefresh'), 200);
+  setTimeout(() => dispatchSimpleAction('dispatch_backup', { title: 'تحديث مركز القيادة', area: 'HQ' }), 180);
 });
 
-document.getElementById('opsForm').addEventListener('submit', (e) => {
+document.getElementById('interrogationForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const form = new FormData(e.currentTarget);
-  post('startOperation', {
+  dispatchSimpleAction('interrogation', {
     caseId: form.get('caseId'),
-    operation: form.get('operation')
+    question: form.get('question'),
+    answer: form.get('answer'),
+    impact: form.get('impact')
   });
-  setTimeout(() => post('requestDataRefresh'), 200);
 });
 
-document.getElementById('advanceRaid').addEventListener('click', () => {
-  const caseId = document.getElementById('raidCaseId').value;
-  if (!caseId) return;
-  post('advanceRaid', { caseId });
-  setTimeout(() => post('requestDataRefresh'), 200);
+document.getElementById('evidenceForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const form = new FormData(e.currentTarget);
+  dispatchSimpleAction('tag_evidence', {
+    caseId: form.get('caseId'),
+    evidenceType: form.get('evidenceType'),
+    media: form.get('media'),
+    notes: form.get('notes')
+  });
+});
+
+document.getElementById('k9Btn').addEventListener('click', () => {
+  const form = new FormData(document.getElementById('opsForm'));
+  dispatchSimpleAction('k9_command', { command: form.get('command'), area: form.get('area') });
+});
+
+document.getElementById('pursuitBtn').addEventListener('click', () => {
+  const form = new FormData(document.getElementById('opsForm'));
+  dispatchSimpleAction('pursuit_tool', { tool: form.get('tool'), area: form.get('area') });
+});
+
+document.getElementById('academyForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const form = new FormData(e.currentTarget);
+  dispatchSimpleAction('academy_run', {
+    trainee: form.get('trainee'),
+    driving: form.get('driving'),
+    shooting: form.get('shooting'),
+    aiDecision: form.get('aiDecision')
+  });
+});
+
+document.getElementById('patrolForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const form = new FormData(e.currentTarget);
+  dispatchSimpleAction('assign_patrol', {
+    unit: form.get('unit'),
+    zone: form.get('zone'),
+    priority: form.get('priority')
+  });
 });

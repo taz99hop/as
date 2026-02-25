@@ -4,8 +4,8 @@ lua54 'yes'
 
 name 'qb-fbi'
 author 'Codex'
-description 'Advanced FBI job system for QBCore with qb-target and NUI'
-version '1.0.0'
+description 'Police command center suite for QBCore + qb-target'
+version '2.0.0'
 
 ui_page 'html/index.html'
 

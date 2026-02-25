@@ -1,36 +1,31 @@
-# qb-fbi
+# qb-fbi (Police Command Suite)
 
-Advanced FBI roleplay job for QBCore + qb-target.
+سكريبت QBCore + qb-target للشرطة بواجهة قيادة مخصصة (نمط شبيه بالصورة المرجعية) مع صلاحيات حسب الرتبة.
 
-## Features
-- Secret identity toggle: `/fbi undercover`.
-- FBI-only classified case management (NUI).
-- Surveillance requests: phone tracing and vehicle bugging with cooldowns.
-- Multi-stage cinematic raid flow with command approval stage control.
-- Specialized internal roles:
-  - Intelligence Analyst
-  - Field Agent
-  - HRT Operator
-  - Regional Lead
-- Federal-level NPC threat files for live events.
-- Agent count balance cap, operation logs, and restricted access gates.
+## المزايا المضمنة (10/10)
+1. **التحقيق الجنائي المتقدم**: بصمات / DNA / دم / توقيت وفاة داخل ملف القضية.
+2. **AI Dispatch & Backup**: إرسال دعم NPC وفتح بلاغات ذكية من مركز القيادة.
+3. **التحقيق الصوتي والاعترافات**: تسجيل أسئلة/إجابات وتأثيرها على القضية.
+4. **Drone & Bridge Cams**: أوامر تسجيل درون وربطها كدليل.
+5. **Evidence Tagging**: وسم الأدلة (صورة/فيديو/صوت) وحفظها للنيابة.
+6. **K9 System**: أوامر تتبع/كشف مخدرات/بحث مفقود.
+7. **Smart Pursuit AI**: أدوات مطاردة (سبايك، حواجز، حاجز متحرك).
+8. **Command Center UI**: لوحة مباشرة للبلاغات وتوزيع الدوريات.
+9. **Police Academy**: نتائج تدريب القيادة/الرماية/الذكاء.
+10. **Shift Report**: تقرير نهاية شفت تلقائي قابل للتصدير (مسار PDF رمزي).
 
-## Dependencies
+## الرتب والصلاحيات
+- Cadet / Officer / Sergeant / Lieutenant / Chief.
+- كل وحدة تظهر بالواجهة فقط إذا الرتبة تملك صلاحيتها.
+
+## الأوامر
+- `/policehub` فتح واجهة القيادة.
+
+## الاعتمادات
 - `qb-core`
 - `qb-target`
 - `oxmysql`
 
-## Installation
-1. Put the folder in your resources directory.
-2. Ensure dependency order in `server.cfg`:
-   ```cfg
-   ensure qb-core
-   ensure qb-target
-   ensure qb-fbi
-   ```
-3. Add FBI job in your QBCore jobs table with 4 grades (0-3).
-4. Restart server.
-
-## Notes
-- Cases are persisted to `server/cases.json` in the resource.
-- This package is a production-ready foundation and can be expanded with real MDT, camera feeds, and judge integrations.
+## ملاحظات
+- التخزين محلي في `server/police_data.json`.
+- يمكن ربط التصدير PDF فعلياً لاحقاً عبر API خارجي.
