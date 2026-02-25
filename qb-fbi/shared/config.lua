@@ -1,135 +1,80 @@
 Config = {}
 
+Config.ProjectName = 'qb-smartdispatch | Tactical Command System'
 Config.JobName = 'police'
-Config.CommandName = 'policehub'
-Config.MaxOfficersOnDuty = 24
+Config.CommandName = 'smartdispatch'
+
+Config.DispatchCenter = {
+    coords = vector3(441.2, -981.9, 30.7),
+    size = vector3(1.2, 1.0, 2.0),
+    heading = 90.0,
+    icon = 'fas fa-headset',
+    label = 'فتح غرفة العمليات'
+}
 
 Config.Ranks = {
-    [0] = 'cadet',
+    [0] = 'officer',
     [1] = 'officer',
     [2] = 'sergeant',
-    [3] = 'lieutenant',
+    [3] = 'sergeant',
     [4] = 'chief'
 }
 
 Config.RankLabels = {
-    cadet = 'مستجد',
-    officer = 'ضابط',
-    sergeant = 'رقيب',
-    lieutenant = 'ملازم',
-    chief = 'قائد'
+    officer = 'Officer',
+    sergeant = 'Sergeant',
+    chief = 'Chief'
 }
 
 Config.Permissions = {
-    cadet = {
-        canViewCommandCenter = true,
-        canUseForensics = true,
-        canUseDispatch = false,
-        canUseInterrogation = false,
-        canUseDrone = false,
-        canTagEvidence = true,
-        canUseK9 = false,
-        canUsePursuitTools = true,
-        canRunAcademy = true,
-        canGenerateReports = true,
-        canAssignPatrols = false
-    },
     officer = {
-        canViewCommandCenter = true,
-        canUseForensics = true,
-        canUseDispatch = true,
-        canUseInterrogation = true,
-        canUseDrone = true,
-        canTagEvidence = true,
-        canUseK9 = true,
-        canUsePursuitTools = true,
-        canRunAcademy = true,
-        canGenerateReports = true,
-        canAssignPatrols = false
+        canViewIncidents = true,
+        canClaimIncident = true,
+        canCloseIncident = false,
+        canDispatch = false,
+        canViewCameras = false,
+        canManageSettings = false,
+        canCityEmergency = false
     },
     sergeant = {
-        canViewCommandCenter = true,
-        canUseForensics = true,
-        canUseDispatch = true,
-        canUseInterrogation = true,
-        canUseDrone = true,
-        canTagEvidence = true,
-        canUseK9 = true,
-        canUsePursuitTools = true,
-        canRunAcademy = true,
-        canGenerateReports = true,
-        canAssignPatrols = true
-    },
-    lieutenant = {
-        canViewCommandCenter = true,
-        canUseForensics = true,
-        canUseDispatch = true,
-        canUseInterrogation = true,
-        canUseDrone = true,
-        canTagEvidence = true,
-        canUseK9 = true,
-        canUsePursuitTools = true,
-        canRunAcademy = true,
-        canGenerateReports = true,
-        canAssignPatrols = true
+        canViewIncidents = true,
+        canClaimIncident = true,
+        canCloseIncident = true,
+        canDispatch = true,
+        canViewCameras = true,
+        canManageSettings = false,
+        canCityEmergency = false
     },
     chief = {
-        canViewCommandCenter = true,
-        canUseForensics = true,
-        canUseDispatch = true,
-        canUseInterrogation = true,
-        canUseDrone = true,
-        canTagEvidence = true,
-        canUseK9 = true,
-        canUsePursuitTools = true,
-        canRunAcademy = true,
-        canGenerateReports = true,
-        canAssignPatrols = true
+        canViewIncidents = true,
+        canClaimIncident = true,
+        canCloseIncident = true,
+        canDispatch = true,
+        canViewCameras = true,
+        canManageSettings = true,
+        canCityEmergency = true
     }
 }
 
-Config.TargetZones = {
-    police_command = {
-        coords = vector3(441.2, -981.9, 30.7),
-        size = vector3(1.2, 1.0, 2.0),
-        heading = 90.0,
-        icon = 'fas fa-shield-halved',
-        label = 'نظام التوجيه والسيطرة'
-    }
+Config.UnitStatuses = {
+    'Available',
+    'Busy',
+    'Pursuit',
+    'Emergency'
 }
 
-Config.QuickActions = {
-    { key = 'forensics', label = 'التحقيق الجنائي', icon = '🧬' },
-    { key = 'dispatch', label = 'الدعم الذكي', icon = '🚓' },
-    { key = 'drone', label = 'كاميرات الجسور والدرون', icon = '📡' },
-    { key = 'k9', label = 'وحدة K9', icon = '🐕' },
-    { key = 'pursuit', label = 'المطاردة الذكية', icon = '🚧' },
-    { key = 'academy', label = 'أكاديمية الشرطة', icon = '🎯' },
-    { key = 'reports', label = 'تقارير نهاية الشفت', icon = '📄' }
+Config.Cameras = {
+    { id = 'CAM-001', label = 'Mission Row Gate', pos = vector3(449.37, -997.04, 36.0), lookAt = vector3(438.7, -991.8, 30.8), minRank = 'sergeant' },
+    { id = 'CAM-002', label = 'Vespucci Blvd', pos = vector3(307.1, -579.4, 59.0), lookAt = vector3(326.9, -574.8, 28.8), minRank = 'sergeant' },
+    { id = 'CAM-003', label = 'Downtown Bridge', pos = vector3(2518.6, -415.7, 101.2), lookAt = vector3(2486.4, -406.0, 93.0), minRank = 'chief' }
 }
 
-Config.Dispatch = {
-    backupVehicle = 'police3',
-    backupPed = 's_m_y_cop_01'
+Config.AutoAlerts = {
+    gunshotCooldown = 45,
+    collisionCooldown = 60,
+    wantedZoneCooldown = 60,
+    wantedZone = { center = vector3(250.0, -1050.0, 29.0), radius = 130.0 }
 }
 
-Config.K9 = {
-    model = 'a_c_shepherd'
-}
-
-Config.Pursuit = {
-    spikeModel = 'p_ld_stinger_s',
-    barrierModel = 'prop_barrier_work06a',
-    roadBlockVehicle = 'police'
-}
-
-Config.DroneBridgeCams = {
-    {
-        pos = vector3(469.5, -1023.1, 42.0),
-        lookAt = vector3(447.0, -1001.0, 30.0)
-    },
-    {
-        pos = vector3(2518.6, -415.7, 101.2),
-        lookAt = vector3(2486.4, -406.0, 93.0)
-    }
-}
+Config.TelemetryTickMs = 2500
+Config.PanicSoundFile = 'alarm.ogg'

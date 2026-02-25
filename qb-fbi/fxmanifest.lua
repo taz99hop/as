@@ -4,8 +4,8 @@ lua54 'yes'
 
 name 'qb-fbi'
 author 'Codex'
-description 'Police command center suite for QBCore + qb-target'
-version '2.0.0'
+description 'qb-smartdispatch tactical command system for QBCore + qb-target'
+version '3.0.0'
 
 ui_page 'html/index.html'
 
