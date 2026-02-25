@@ -101,7 +101,14 @@ local function sendTabletData(src, withManager)
 end
 
 RegisterNetEvent('parcel_express:server:requestTabletData', function()
-    sendTabletData(source, true)
+    local src = source
+    local player = getPlayer(src)
+    if not player or player.PlayerData.job.name ~= Config.JobName then
+        TriggerClientEvent('parcel_express:client:forceCloseUI', src)
+        return
+    end
+
+    sendTabletData(src, true)
 end)
 
 RegisterNetEvent('parcel_express:server:toggleDuty', function()
@@ -225,7 +232,14 @@ RegisterNetEvent('parcel_express:server:completeRoute', function(routeId)
 end)
 
 RegisterNetEvent('parcel_express:server:managerRequestData', function()
-    sendTabletData(source, true)
+    local src = source
+    local player = getPlayer(src)
+    if not isManager(player) then
+        TriggerClientEvent('parcel_express:client:forceCloseUI', src)
+        return
+    end
+
+    sendTabletData(src, true)
 end)
 
 RegisterNetEvent('parcel_express:server:managerAction', function(data)

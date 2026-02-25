@@ -62,6 +62,11 @@ local function closeTablet()
     SendNUIMessage({ action = Shared.NUIActions.CLOSE })
 end
 
+
+RegisterNetEvent('parcel_express:client:forceCloseUI', function()
+    closeTablet()
+end)
+
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
     Parcel.PlayerData = QBCore.Functions.GetPlayerData()
     closeTablet()
@@ -277,4 +282,15 @@ end)
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
     closeTablet()
+end)
+
+
+CreateThread(function()
+    while true do
+        Wait(1500)
+        if Parcel.UIOpen and not isParcelJob() then
+            closeTablet()
+            TriggerEvent('parcel_express:client:forceCleanup', true)
+        end
+    end
 end)
