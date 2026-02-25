@@ -26,6 +26,35 @@ local function ensureDutyState(src)
     return DutyPlayers[src]
 end
 
+
+local function hasValidCompanyVehicle(src, state)
+    if state.plate and state.plate ~= '' then
+        return true
+    end
+
+    local ped = GetPlayerPed(src)
+    if not ped or ped == 0 then
+        return false
+    end
+
+    local vehicle = GetVehiclePedIsIn(ped, false)
+    if not vehicle or vehicle == 0 then
+        return false
+    end
+
+    local plate = (GetVehicleNumberPlateText(vehicle) or ''):gsub('%s+', '')
+    local model = GetEntityModel(vehicle)
+    local isCompanyModel = model == GetHashKey(Config.CompanyVehicle)
+    local isCompanyPlate = plate ~= '' and plate:sub(1, #Config.VehiclePlatePrefix) == Config.VehiclePlatePrefix
+
+    if isCompanyModel or isCompanyPlate then
+        state.plate = plate
+        return true
+    end
+
+    return false
+end
+
 local function getOnlineDriversCount()
     local count = 0
     for _, data in pairs(DutyPlayers) do
@@ -154,7 +183,7 @@ RegisterNetEvent('parcel_express:server:loadPackages', function()
         return TriggerClientEvent('parcel_express:client:notify', src, 'سجل دخولك للدوام أولاً.', 'error')
     end
 
-    if not state.plate then
+    if not hasValidCompanyVehicle(src, state) then
         return TriggerClientEvent('parcel_express:client:notify', src, 'لا يمكنك تحميل الطرود بدون مركبة الشركة.', 'error')
     end
 
@@ -169,7 +198,7 @@ RegisterNetEvent('parcel_express:server:requestRoute', function()
         return TriggerClientEvent('parcel_express:client:notify', src, 'يجب تسجيل الدخول أولاً.', 'error')
     end
 
-    if not state.plate then
+    if not hasValidCompanyVehicle(src, state) then
         return TriggerClientEvent('parcel_express:client:notify', src, 'المهمة تتطلب مركبة الشركة.', 'error')
     end
 

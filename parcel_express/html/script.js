@@ -114,3 +114,10 @@ document.getElementById('fireDriver').addEventListener('click', () => {
 document.getElementById('resetStats').addEventListener('click', () => {
     post('managerAction', { action: 'resetStats', citizenid: document.getElementById('resetCitizen').value.trim() });
 });
+
+
+window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        post('close');
+    }
+});

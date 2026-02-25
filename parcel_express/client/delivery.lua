@@ -109,6 +109,10 @@ CreateThread(function()
                         return QBCore.Functions.Notify('يجب استلام مركبة العمل أولاً.', 'error')
                     end
 
+                    if Parcel.State.dutyPlate then
+                        TriggerServerEvent('parcel_express:server:setVehiclePlate', Parcel.State.dutyPlate)
+                    end
+
                     QBCore.Functions.Progressbar('parcel_load', 'جاري تحميل الطرود من المستودع...', 6000, false, true, {
                         disableMovement = true,
                         disableCarMovement = true,
