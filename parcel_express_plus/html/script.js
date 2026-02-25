@@ -13,10 +13,16 @@ const fields = {
     dayProfit: document.getElementById('dayProfit')
 };
 
+const EXPECTED_UI_TOKEN = 'parcel_secure_v1';
+
 let tabletState = {
     onDuty: false,
     isManager: false
 };
+
+function isTrustedPayload(payload = {}) {
+    return payload && payload.uiToken === EXPECTED_UI_TOKEN;
+}
 
 function post(event, data = {}) {
     fetch(`https://${GetParentResourceName()}/${event}`, {
@@ -52,6 +58,7 @@ window.addEventListener('message', (event) => {
     const { action, payload } = event.data;
 
     if (action === 'openTablet') {
+        if (!isTrustedPayload(payload)) return;
         app.classList.remove('hidden');
         tabletState.onDuty = !!payload.onDuty;
         tabletState.isManager = !!payload.isManager;
@@ -72,6 +79,7 @@ window.addEventListener('message', (event) => {
     }
 
     if (action === 'updateTablet') {
+        if (!isTrustedPayload(payload)) return;
         if (typeof payload.onDuty !== 'undefined') tabletState.onDuty = payload.onDuty;
         if (typeof payload.delivered !== 'undefined') fields.delivered.textContent = payload.delivered;
         if (typeof payload.earnings !== 'undefined') fields.earnings.textContent = `$${payload.earnings}`;
@@ -84,6 +92,7 @@ window.addEventListener('message', (event) => {
     }
 
     if (action === 'updateManager') {
+        if (!isTrustedPayload(payload)) return;
         renderManagerDrivers(payload.drivers || []);
     }
 });

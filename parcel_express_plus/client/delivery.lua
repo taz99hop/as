@@ -3,6 +3,29 @@ local QBCore = exports['qb-core']:GetCoreObject()
 local currentDoorZone = nil
 local currentBlip = nil
 
+local function hasDutyVehicleLocal()
+    if Parcel.State.hasVehicle then
+        return true
+    end
+
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    if veh == 0 then return false end
+
+    local plate = (GetVehicleNumberPlateText(veh) or ''):gsub('%s+', '')
+    local isCompanyPlate = plate ~= '' and plate:sub(1, #Config.VehiclePlatePrefix) == Config.VehiclePlatePrefix
+    local isCompanyModel = GetEntityModel(veh) == GetHashKey(Config.CompanyVehicle)
+
+    if isCompanyPlate or isCompanyModel then
+        Parcel.State.hasVehicle = true
+        Parcel.State.dutyVehicle = veh
+        Parcel.State.dutyPlate = plate ~= '' and plate or Parcel.State.dutyPlate
+        return true
+    end
+
+    return false
+end
+
 local function clearDoorTarget()
     if currentDoorZone then
         exports['qb-target']:RemoveZone(currentDoorZone)
@@ -82,7 +105,7 @@ local function requestNextRoute()
         return QBCore.Functions.Notify('يجب تسجيل الدخول إلى الدوام أولاً.', 'error')
     end
 
-    if not Parcel.State.hasVehicle then
+    if not hasDutyVehicleLocal() then
         return QBCore.Functions.Notify('لا يمكنك البدء بدون مركبة الشركة.', 'error')
     end
 
@@ -105,9 +128,15 @@ CreateThread(function()
                     if not Parcel.State.onDuty then
                         return QBCore.Functions.Notify('يجب تسجيل الدخول أولاً.', 'error')
                     end
-                    if not Parcel.State.hasVehicle then
+                    if not hasDutyVehicleLocal() then
                         return QBCore.Functions.Notify('يجب استلام مركبة العمل أولاً.', 'error')
                     end
+
+                    local now = GetGameTimer()
+                    if Parcel.State.lastLoadAt and (now - Parcel.State.lastLoadAt) < 3500 then
+                        return QBCore.Functions.Notify('انتظر قليلاً قبل إعادة التحميل.', 'error')
+                    end
+                    Parcel.State.lastLoadAt = now
 
                     if Parcel.State.dutyPlate then
                         TriggerServerEvent('parcel_express:server:setVehiclePlate', Parcel.State.dutyPlate)

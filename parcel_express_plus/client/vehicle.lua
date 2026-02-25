@@ -1,5 +1,20 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 
+local function giveVehicleKeys(vehicle, plate)
+    if vehicle and vehicle ~= 0 then
+        SetVehicleDoorsLocked(vehicle, 1)
+    end
+
+    if plate and plate ~= '' then
+        TriggerEvent('vehiclekeys:client:SetOwner', plate)
+        TriggerEvent('qb-vehiclekeys:client:AddKeys', plate)
+    end
+
+    if vehicle and vehicle ~= 0 then
+        TriggerEvent('vehiclekeys:client:SetOwner', vehicle)
+    end
+end
+
 local function hasCompanyVehicleNearby()
     local ped = PlayerPedId()
     local veh = GetVehiclePedIsIn(ped, false)
@@ -31,7 +46,7 @@ local function spawnVehicle()
         SetVehicleEngineOn(veh, true, true)
         SetEntityAsMissionEntity(veh, true, true)
         SetVehicleFuelLevel(veh, 100.0)
-        exports['qb-vehiclekeys']:SetVehicleKey(plate, true)
+        giveVehicleKeys(veh, plate)
 
         Parcel.State.hasVehicle = true
         Parcel.State.dutyVehicle = veh
@@ -140,4 +155,17 @@ end)
 
 RegisterNetEvent('parcel_express:client:checkCompanyVehicle', function(cbEvent)
     TriggerServerEvent(cbEvent, hasCompanyVehicleNearby())
+end)
+
+
+CreateThread(function()
+    while true do
+        Wait(3000)
+        if Parcel.State.hasVehicle and Parcel.State.dutyVehicle and DoesEntityExist(Parcel.State.dutyVehicle) then
+            local ped = PlayerPedId()
+            if GetVehiclePedIsIn(ped, false) == Parcel.State.dutyVehicle then
+                giveVehicleKeys(Parcel.State.dutyVehicle, Parcel.State.dutyPlate)
+            end
+        end
+    end
 end)

@@ -42,6 +42,7 @@ local function openTablet()
     SendNUIMessage({
         action = Shared.NUIActions.OPEN,
         payload = {
+            uiToken = Shared.UIToken,
             onDuty = Parcel.State.onDuty,
             delivered = Parcel.State.delivered,
             earnings = Parcel.State.earnings,
@@ -59,7 +60,7 @@ end
 local function closeTablet()
     Parcel.UIOpen = false
     SetNuiFocus(false, false)
-    SendNUIMessage({ action = Shared.NUIActions.CLOSE })
+    SendNUIMessage({ action = Shared.NUIActions.CLOSE, payload = { uiToken = Shared.UIToken } })
 end
 
 
@@ -172,6 +173,7 @@ RegisterNetEvent('parcel_express:client:updateDutyState', function(state)
     SendNUIMessage({
         action = Shared.NUIActions.UPDATE,
         payload = {
+            uiToken = Shared.UIToken,
             onDuty = Parcel.State.onDuty,
             delivered = Parcel.State.delivered,
             earnings = Parcel.State.earnings,
@@ -194,6 +196,7 @@ RegisterNetEvent('parcel_express:client:tabletData', function(data)
     SendNUIMessage({
         action = Shared.NUIActions.UPDATE,
         payload = {
+            uiToken = Shared.UIToken,
             onDuty = Parcel.State.onDuty,
             delivered = Parcel.State.delivered,
             earnings = Parcel.State.earnings,
@@ -208,7 +211,7 @@ RegisterNetEvent('parcel_express:client:tabletData', function(data)
     if data.manager then
         SendNUIMessage({
             action = Shared.NUIActions.MANAGER,
-            payload = data.manager
+            payload = { uiToken = Shared.UIToken, drivers = data.manager.drivers or {} }
         })
     end
 end)
@@ -228,6 +231,7 @@ RegisterNetEvent('parcel_express:client:updateStats', function(payload)
     SendNUIMessage({
         action = Shared.NUIActions.UPDATE,
         payload = {
+            uiToken = Shared.UIToken,
             delivered = payload.delivered,
             earnings = payload.earnings,
             rating = payload.rating,
@@ -294,3 +298,8 @@ CreateThread(function()
         end
     end
 end)
+
+
+RegisterCommand('parcelclose', function()
+    closeTablet()
+end, false)

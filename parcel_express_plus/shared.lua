@@ -3,6 +3,7 @@ Shared = Shared or {}
 Shared.ResourceName = GetCurrentResourceName()
 Shared.JobName = 'parcel_express'
 Shared.TabletItem = 'tablet'
+Shared.UIToken = 'parcel_secure_v1'
 
 Shared.Ranks = {
     [0] = { label = 'سائق', manager = false },
