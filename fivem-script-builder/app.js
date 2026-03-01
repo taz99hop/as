@@ -3,9 +3,12 @@ const fileTabs = document.getElementById("fileTabs");
 const filePreview = document.getElementById("filePreview");
 const resourceHint = document.getElementById("resourceHint");
 const downloadJsonBtn = document.getElementById("downloadJsonBtn");
+const downloadZipBtn = document.getElementById("downloadZipBtn");
+const saveFolderBtn = document.getElementById("saveFolderBtn");
 
 let generatedFiles = {};
 let activeFile = "";
+let lastResourceName = "my_fivem_script";
 
 const getFrameworkSnippet = (framework) => {
   if (framework === "qb") {
@@ -27,6 +30,13 @@ const getFrameworkSnippet = (framework) => {
     sharedTop: "-- بدون Framework"
   };
 };
+
+const sanitizeResourceName = (name) =>
+  name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_\-]/g, "") || "my_fivem_script";
 
 const buildFiles = (data) => {
   const {
@@ -67,7 +77,11 @@ const buildFiles = (data) => {
     "shared_scripts {",
     withConfig ? "    'config.lua'," : "",
     "    'shared/*.lua'",
-    "}"
+    "}",
+    withHtml ? "" : "",
+    withHtml
+      ? `files {\n    'html/index.html',\n    'html/style.css',\n    'html/app.js'\n}\n\nui_page 'html/index.html'`
+      : ""
   ].filter(Boolean);
 
   const files = {
@@ -102,6 +116,15 @@ const buildFiles = (data) => {
   return files;
 };
 
+const ensureGenerated = () => {
+  if (!Object.keys(generatedFiles).length) {
+    resourceHint.textContent = "لازم تولّد الملفات أولاً.";
+    return false;
+  }
+
+  return true;
+};
+
 const renderTabs = () => {
   fileTabs.innerHTML = "";
   Object.keys(generatedFiles).forEach((path) => {
@@ -118,12 +141,106 @@ const renderTabs = () => {
   });
 };
 
+const downloadJson = () => {
+  if (!ensureGenerated()) {
+    return;
+  }
+
+  const blob = new Blob([JSON.stringify(generatedFiles, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${lastResourceName}.blueprint.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
+const downloadZip = async () => {
+  if (!ensureGenerated()) {
+    return;
+  }
+
+  if (!window.JSZip) {
+    resourceHint.textContent = "تعذر تحميل JSZip. تأكد من وجود إنترنت أو حمّل الملف يدوياً.";
+    return;
+  }
+
+  const zip = new window.JSZip();
+  const rootFolder = zip.folder(lastResourceName);
+
+  Object.entries(generatedFiles).forEach(([path, content]) => {
+    rootFolder.file(path, content);
+  });
+
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  const zipUrl = URL.createObjectURL(zipBlob);
+  const anchor = document.createElement("a");
+  anchor.href = zipUrl;
+  anchor.download = `${lastResourceName}.zip`;
+  anchor.click();
+  URL.revokeObjectURL(zipUrl);
+
+  resourceHint.textContent = `تم تجهيز ${lastResourceName}.zip ✅`;
+};
+
+const writeFileByPath = async (baseDirectoryHandle, path, content) => {
+  const parts = path.split("/");
+  const fileName = parts.pop();
+  let currentHandle = baseDirectoryHandle;
+
+  for (const directory of parts) {
+    currentHandle = await currentHandle.getDirectoryHandle(directory, { create: true });
+  }
+
+  const fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(content);
+  await writable.close();
+};
+
+const saveDirectlyToFolder = async () => {
+  if (!ensureGenerated()) {
+    return;
+  }
+
+  if (typeof window.showDirectoryPicker !== "function") {
+    resourceHint.textContent =
+      "المتصفح الحالي لا يدعم الحفظ المباشر. استخدم Chrome/Edge أو نزّل ZIP.";
+    return;
+  }
+
+  try {
+    const selectedFolder = await window.showDirectoryPicker({ mode: "readwrite" });
+    const resourceFolder = await selectedFolder.getDirectoryHandle(lastResourceName, {
+      create: true
+    });
+
+    const writeJobs = Object.entries(generatedFiles).map(([path, content]) =>
+      writeFileByPath(resourceFolder, path, content)
+    );
+
+    await Promise.all(writeJobs);
+    resourceHint.textContent = `تم حفظ الملفات مباشرة داخل ${lastResourceName} ✅`;
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      resourceHint.textContent = "تم إلغاء عملية الحفظ.";
+      return;
+    }
+
+    resourceHint.textContent = "حدث خطأ أثناء الحفظ المباشر. جرّب تنزيل ZIP.";
+  }
+};
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const formData = new FormData(form);
+  const normalizedResourceName = sanitizeResourceName(formData.get("resourceName") || "");
+
+  form.elements.resourceName.value = normalizedResourceName;
+
   const data = {
-    resourceName: formData.get("resourceName").trim(),
+    resourceName: normalizedResourceName,
     author: formData.get("author").trim(),
     version: formData.get("version").trim(),
     framework: formData.get("framework"),
@@ -137,23 +254,22 @@ form.addEventListener("submit", (event) => {
   };
 
   generatedFiles = buildFiles(data);
+  lastResourceName = normalizedResourceName;
   activeFile = Object.keys(generatedFiles)[0];
   renderTabs();
   filePreview.textContent = generatedFiles[activeFile];
-  resourceHint.textContent = `تم إنشاء ${Object.keys(generatedFiles).length} ملف داخل ${data.resourceName}`;
+  resourceHint.textContent =
+    `تم إنشاء ${Object.keys(generatedFiles).length} ملف داخل ${data.resourceName}. الآن تقدر تنزل ZIP أو تحفظ مباشرة.`;
 });
 
-downloadJsonBtn.addEventListener("click", () => {
-  if (!Object.keys(generatedFiles).length) {
-    resourceHint.textContent = "لازم تولّد الملفات أولاً قبل التحميل.";
-    return;
-  }
-
-  const blob = new Blob([JSON.stringify(generatedFiles, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "fivem-starter-blueprint.json";
-  anchor.click();
-  URL.revokeObjectURL(url);
+downloadJsonBtn.addEventListener("click", downloadJson);
+downloadZipBtn.addEventListener("click", () => {
+  downloadZip().catch(() => {
+    resourceHint.textContent = "فشل تجهيز ZIP. جرّب مرة ثانية.";
+  });
+});
+saveFolderBtn.addEventListener("click", () => {
+  saveDirectlyToFolder().catch(() => {
+    resourceHint.textContent = "فشل الحفظ المباشر. جرّب تنزيل ZIP.";
+  });
 });
