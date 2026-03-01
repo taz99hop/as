@@ -1,0 +1,163 @@
+:root {
+  --bg: #0b1020;
+  --card: #151c33;
+  --accent: #6f9bff;
+  --accent-2: #8f67ff;
+  --text: #eaf0ff;
+  --muted: #a8b5d8;
+  --line: #2a3762;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  background: radial-gradient(circle at top, #18254f, var(--bg));
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.app-shell {
+  width: min(1100px, 92%);
+  margin: 2.5rem auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.hero h1 {
+  margin: 0.35rem 0;
+  font-size: clamp(1.7rem, 3.5vw, 2.6rem);
+}
+
+.hero p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.badge {
+  display: inline-block;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: #fff;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.84rem;
+}
+
+.card {
+  background: rgba(21, 28, 51, 0.9);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+}
+
+h2 {
+  margin-top: 0;
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.grid.two {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+label,
+fieldset {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--muted);
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+input,
+select {
+  background: #111933;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.65rem;
+}
+
+fieldset {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.7rem;
+}
+
+fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button.primary {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: #fff;
+}
+
+#downloadJsonBtn {
+  background: #293a6f;
+  color: #fff;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 0.7rem;
+}
+
+.tab {
+  background: #1c2749;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0.45rem 0.65rem;
+}
+
+.tab.active {
+  background: #3452a8;
+}
+
+.preview {
+  background: #0d1430;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem;
+  max-height: 400px;
+  overflow: auto;
+}

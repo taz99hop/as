@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FiveM Script Starter</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <p class="badge">FiveM Builder</p>
+        <h1>مولّد سكربتات فايف إم</h1>
+        <p>
+          أنشئ ملفات البداية لأي ريسورس (fxmanifest + client/server/config) بضغطة زر
+          وبواجهة أنيقة.
+        </p>
+      </header>
+
+      <section class="card form-card">
+        <h2>إعدادات السكربت</h2>
+        <form id="generatorForm">
+          <div class="grid two">
+            <label>
+              اسم الريسورس
+              <input name="resourceName" value="my_fivem_script" required />
+            </label>
+            <label>
+              اسم الكاتب
+              <input name="author" value="YourName" required />
+            </label>
+          </div>
+
+          <div class="grid two">
+            <label>
+              إصدار السكربت
+              <input name="version" value="1.0.0" required />
+            </label>
+            <label>
+              إطار العمل
+              <select name="framework">
+                <option value="none">بدون Framework</option>
+                <option value="qb">QBCore</option>
+                <option value="esx">ESX</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="grid two">
+            <label>
+              لعبة الهدف
+              <input name="game" value="gta5" required />
+            </label>
+            <label>
+              نسخة fx_version
+              <select name="fxVersion">
+                <option value="cerulean">cerulean</option>
+                <option value="bodacious">bodacious</option>
+                <option value="adamant">adamant</option>
+              </select>
+            </label>
+          </div>
+
+          <fieldset>
+            <legend>الملفات المطلوبة</legend>
+            <label><input type="checkbox" name="withConfig" checked /> إنشاء config.lua</label>
+            <label><input type="checkbox" name="withLocales" /> إنشاء locales/ar.lua</label>
+            <label><input type="checkbox" name="withHtml" /> إنشاء واجهة NUI (html)</label>
+            <label><input type="checkbox" name="withReadme" checked /> إنشاء README</label>
+          </fieldset>
+
+          <label>
+            سطر إضافي في server.cfg (اختياري)
+            <input name="cfgLine" placeholder="ensure my_fivem_script" />
+          </label>
+
+          <div class="actions">
+            <button type="submit" class="primary">✨ توليد الملفات</button>
+            <button type="button" id="downloadZipBtn">📦 تنزيل ZIP جاهز</button>
+            <button type="button" id="saveFolderBtn">💾 حفظ مباشر داخل مجلد</button>
+            <button type="button" id="downloadJsonBtn">⬇️ تحميل Blueprint JSON</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card output-card">
+        <h2>النتيجة</h2>
+        <p id="resourceHint">اضغط على "توليد الملفات" لعرض القوالب الجاهزة.</p>
+        <div id="fileTabs" class="tabs"></div>
+        <pre id="filePreview" class="preview">-- لا يوجد محتوى حالياً</pre>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
